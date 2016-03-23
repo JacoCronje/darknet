@@ -126,3 +126,4 @@
 /home/jcronje/dev/JacoCronje-darknet/src/yolo_kernels.cu
 /home/jcronje/dev/JacoCronje-darknet/README.md
 Makefile
+cfg/cifar-exp.cfg
