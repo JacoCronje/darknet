@@ -61,5 +61,9 @@ void scale_bias_gpu(float *output, float *biases, int batch, int n, int size);
 
 void smooth_l1_gpu(int n, float *pred, float *truth, float *delta, float *error);
 void l2_gpu(int n, float *pred, float *truth, float *delta, float *error);
+
+void routescale_gpu(int w1, int h1, int c1, float *src, int w2, int h2, int c2, float *out);
+void routedelta_gpu(int w1, int h1, int c1, float *delta, int w2, int h2, int c2, float *src);
+
 #endif
 #endif

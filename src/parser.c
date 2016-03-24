@@ -390,21 +390,35 @@ route_layer parse_route(list *options, size_params params, network net)
     }
     int batch = params.batch;
 
-    route_layer layer = make_route_layer(batch, n, layers, sizes);
-
     convolutional_layer first = net.layers[layers[0]];
-    layer.out_w = first.out_w;
-    layer.out_h = first.out_h;
-    layer.out_c = first.out_c;
+    int out_w = first.out_w;
+    int out_h = first.out_h;
+    int out_c = first.out_c;
     for(i = 1; i < n; ++i){
         int index = layers[i];
         convolutional_layer next = net.layers[index];
-        if(next.out_w == first.out_w && next.out_h == first.out_h){
-            layer.out_c += next.out_c;
-        }else{
-            layer.out_h = layer.out_w = layer.out_c = 0;
+        if (next.out_h*next.out_w > out_w*out_h)
+        {
+            out_w = next.out_w;
+            out_h = next.out_h;
         }
+        out_c += next.out_c;
     }
+
+    route_layer layer = make_route_layer(batch, n, layers, sizes, out_w, out_h, out_c);
+
+//    layer.out_w = first.out_w;
+//    layer.out_h = first.out_h;
+//    layer.out_c = first.out_c;
+//    for(i = 1; i < n; ++i){
+//        int index = layers[i];
+//        convolutional_layer next = net.layers[index];
+//        if(next.out_w == first.out_w && next.out_h == first.out_h){
+//            layer.out_c += next.out_c;
+//        }else{
+//            layer.out_h = layer.out_w = layer.out_c = 0;
+//        }
+//    }
 
     return layer;
 }

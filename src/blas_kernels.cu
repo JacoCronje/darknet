@@ -448,3 +448,104 @@ extern "C" void l2_gpu(int n, float *pred, float *truth, float *delta, float *er
     l2_kernel<<<cuda_gridsize(n), BLOCK>>>(n, pred, truth, delta, error);
     check_error(cudaPeekAtLastError());
 }
+
+__global__ void routescale_kernel(int size, int w1, int h1, int c1, float *src, int w2, int h2, int c2, float *out)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % w2;
+    id /= w2;
+    int y = id % h2;
+    id /= h2;
+    int c = id % c1;
+
+    // no interpolation
+//    int src_index = (x*w1/w2) + w1*(y*h1/h2) + c*w1*h1;
+ //   int out_index = x + w2*y + c*w2*h2;
+  //  out[out_index] = src[src_index];
+
+    // interpolation
+    int x1 = x*w1/w2;
+    int y1 = y*h1/h2;
+    float x1p = (float)(x1*w2)/w1;
+    float y1p = (float)(y1*h2)/h1;
+    float x2p = (float)((x1+1)*w2)/w1;
+    float y2p = (float)((y1+1)*h2)/h1;
+    float xDelta = ((float)(x) - x1p) / (x2p-x1p);
+    float yDelta = ((float)(y) - y1p) / (y2p-y1p);
+
+    // read corner values
+    int ridx = x1 + w1*y1 + c*w1*h1;
+    float pa = src[ridx];
+    float pb = src[ridx+1];
+    float pc = src[ridx+1+w1];
+    float pd = src[ridx+w1];
+
+    float ab = (1.f-xDelta)*pa + (xDelta)*pb;
+    float dc = (1.f-xDelta)*pd + (xDelta)*pc;
+    float f = (1.f-yDelta)*ab + (yDelta)*dc;
+    int out_index = x + w2*y + c*w2*h2;
+    out[out_index] = f;
+
+
+}
+
+extern "C" void routescale_gpu(int w1, int h1, int c1, float *src, int w2, int h2, int c2, float *out)
+{
+    int size = w2*h2*c1;
+    routescale_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w1, h1, c1, src, w2, h2, c2, out);
+    check_error(cudaPeekAtLastError());
+}
+
+__global__ void routedelta_kernel(int size, int w1, int h1, int c1, float *delta, int w2, int h2, int c2, float *src)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % w2;
+    id /= w2;
+    int y = id % h2;
+    id /= h2;
+    int c = id % c1;
+
+    // no interpolation
+//    int out_index = (x*w1/w2) + w1*(y*h1/h2) + c*w1*h1;
+//    int src_index = x + w2*y + c*w2*h2;
+//   // float ratio = (float)(w1*h1) / (w2*h2);
+//    float f = src[src_index];// * ratio;
+//    delta += out_index;
+//    atomicAdd(delta, f);
+
+    // interpolation
+    int x1 = x*w1/w2;
+    int y1 = y*h1/h2;
+    float x1p = (float)(x1*w2)/w1;
+    float y1p = (float)(y1*h2)/h1;
+    float x2p = (float)((x1+1)*w2)/w1;
+    float y2p = (float)((y1+1)*h2)/h1;
+    float xDelta = ((float)(x) - x1p) / (x2p-x1p);
+    float yDelta = ((float)(y) - y1p) / (y2p-y1p);
+
+    int out_index = x1 + w1*y1 + c*w1*h1;
+    int src_index = x + w2*y + c*w2*h2;
+    float f = src[src_index];
+    delta += out_index;
+    float fa = f * (1.f - xDelta) * (1.f - yDelta);
+    float fb = f * (xDelta) * (1.f - yDelta);
+    float fc = f * (xDelta) * (yDelta);
+    float fd = f * (1.f - xDelta) * (yDelta);
+    atomicAdd(delta, fa);
+    delta += 1;
+    atomicAdd(delta, fb);
+    delta += w1;
+    atomicAdd(delta, fc);
+    delta -= 1;
+    atomicAdd(delta, fd);
+}
+
+extern "C" void routedelta_gpu(int w1, int h1, int c1, float *delta, int w2, int h2, int c2, float *src)
+{
+    int size = w2*h2*c1;
+    routedelta_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w1, h1, c1, delta, w2, h2, c2, src);
+    check_error(cudaPeekAtLastError());
+}
+
