@@ -23,7 +23,8 @@ typedef enum {
     SHORTCUT,
     ACTIVE,
     RNN,
-    CRNN
+    CRNN,
+    COMPACT
 } LAYER_TYPE;
 
 typedef enum{

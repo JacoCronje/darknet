@@ -23,6 +23,7 @@
 #include "dropout_layer.h"
 #include "route_layer.h"
 #include "shortcut_layer.h"
+#include "compact_layer.h"
 
 int get_current_batch(network net)
 {
@@ -106,6 +107,8 @@ char *get_layer_string(LAYER_TYPE a)
             return "route";
         case SHORTCUT:
             return "shortcut";
+        case COMPACT:
+            return "compact";
         case NORMALIZATION:
             return "normalization";
         default:
@@ -170,6 +173,8 @@ void forward_network(network net, network_state state)
             forward_route_layer(l, net);
         } else if(l.type == SHORTCUT){
             forward_shortcut_layer(l, state);
+        } else if(l.type == COMPACT){
+            forward_compact_layer(l, state);
         }
         state.input = l.output;
     }
@@ -278,6 +283,8 @@ void backward_network(network net, network_state state)
             backward_route_layer(l, net);
         } else if(l.type == SHORTCUT){
             backward_shortcut_layer(l, state);
+        } else if(l.type == COMPACT){
+            backward_compact_layer(l, state);
         }
     }
 }
