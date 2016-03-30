@@ -8,26 +8,45 @@
 #include "opencv2/highgui/highgui_c.h"
 #endif
 
+int cifar_set = 10;
+
+
 void train_cifar(char *cfgfile, char *weightfile)
 {
     data_seed = time(0);
     srand(time(0));
     float avg_loss = -1;
     char *base = basecfg(cfgfile);
+    char *backup_directory = "backup";
     printf("%s\n", base);
     network net = parse_network_cfg(cfgfile);
     if(weightfile){
         load_weights(&net, weightfile);
     }
-    printf("Learning Rate: %g, Momentum: %g, Decay: %g\n", net.learning_rate, net.momentum, net.decay);
 
-    char *backup_directory = "backup";
-    int classes = 10;
+    {
+        char buff[256];
+        sprintf(buff, "%s/%s.txt", backup_directory, base);
+        freopen(buff, "w", stdout);
+    }
+
+    fprintf(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net.learning_rate, net.momentum, net.decay);
+
+    int classes = cifar_set;
     int N = 50000;
 
     int epoch = (*net.seen)/N;
-    data train = load_all_cifar10();
-    data test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
+    data train;
+    data test;
+    if (cifar_set==10)
+    {
+        train = load_all_cifar10();
+        test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
+    } else
+    {
+        train = load_all_cifar100();
+        test = load_cifar100_data("data/cifar/cifar-100-batches-bin/test.bin");
+    }
 
     clock_t time=clock();
     float a[4];
@@ -39,7 +58,9 @@ void train_cifar(char *cfgfile, char *weightfile)
         avg_loss = avg_loss*.95 + loss*.05;
         if(get_current_batch(net)%100 == 0)
         {
-            printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), (float)(*net.seen)/N, loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
+            fprintf(stderr, "%d, %.3f: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), (float)(*net.seen)/N, loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
+            fprintf(stdout, "%d, %.3f: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), (float)(*net.seen)/N, loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
+            fflush(stdout);
             time=clock();
         }
 //        if(*net.seen/N > epoch){
@@ -56,7 +77,9 @@ void train_cifar(char *cfgfile, char *weightfile)
             float *accT = network_accuracies(net, train, 2);
             a[0] = accT[0];
             a[1] = accT[1];
-            printf("Accuracy: train(%f %f) test(%f %f)\n", a[0], a[1], a[2], a[3]);
+            fprintf(stderr, "Accuracy: train(%f %f) test(%f %f)\n", a[0], a[1], a[2], a[3]);
+            fprintf(stdout, "Accuracy: train(%f %f) test(%f %f)\n", a[0], a[1], a[2], a[3]);
+            fflush(stdout);
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights",backup_directory,base, get_current_batch(net));
             save_weights(net, buff);
@@ -178,7 +201,15 @@ void test_cifar(char *filename, char *weightfile)
     clock_t time;
     float avg_acc = 0;
     float avg_top5 = 0;
-    data test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
+
+    data test;
+    if (cifar_set==10)
+    {
+        test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
+    } else
+    {
+        test = load_cifar100_data("data/cifar/cifar-100-batches-bin/test.bin");
+    }
 
     time=clock();
 
@@ -272,12 +303,14 @@ void eval_cifar_csv()
 void run_cifar(int argc, char **argv)
 {
     if(argc < 4){
-        fprintf(stderr, "usage: %s %s [train/test/valid] [cfg] [weights (optional)]\n", argv[0], argv[1]);
+        fprintf(stderr, "usage: %s %s [train/test/valid] [10/100] [cfg] [weights (optional)]\n", argv[0], argv[1]);
         return;
     }
 
-    char *cfg = argv[3];
-    char *weights = (argc > 4) ? argv[4] : 0;
+    cifar_set = atoi(argv[3]);
+    fprintf(stderr, "CIFAR%d\n", cifar_set);
+    char *cfg = argv[4];
+    char *weights = (argc > 5) ? argv[5] : 0;
     if(0==strcmp(argv[2], "train")) train_cifar(cfg, weights);
     else if(0==strcmp(argv[2], "distill")) train_cifar_distill(cfg, weights);
     else if(0==strcmp(argv[2], "test")) test_cifar(cfg, weights);

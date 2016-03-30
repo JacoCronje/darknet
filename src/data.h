@@ -76,6 +76,9 @@ box_label *read_boxes(char *filename, int *n);
 data load_cifar10_data(char *filename);
 data load_all_cifar10();
 
+data load_cifar100_data(char *filename);
+data load_all_cifar100();
+
 data load_data_writing(char **paths, int n, int m, int w, int h, int out_w, int out_h);
 
 list *get_paths(char *filename);

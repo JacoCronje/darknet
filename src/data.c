@@ -820,6 +820,66 @@ data load_categorical_data_csv(char *filename, int target, int k)
     return d;
 }
 
+data load_cifar100_data(char *filename)
+{
+    data d;
+    d.shallow = 0;
+    long i,j;
+    matrix X = make_matrix(10000, 3072);
+    matrix y = make_matrix(10000, 100);
+    d.X = X;
+    d.y = y;
+
+    FILE *fp = fopen(filename, "rb");
+    if(!fp) file_error(filename);
+    for(i = 0; i < 10000; ++i){
+        unsigned char bytes[3074];
+        fread(bytes, 1, 3074, fp);
+        int class = bytes[1];
+        y.vals[i][class] = 1;
+        for(j = 0; j < X.cols; ++j){
+            X.vals[i][j] = (double)bytes[j+2];
+        }
+    }
+    //translate_data_rows(d, -128);
+    scale_data_rows(d, 1./255);
+    //normalize_data_rows(d);
+    fclose(fp);
+    return d;
+}
+
+data load_all_cifar100()
+{
+    data d;
+    d.shallow = 0;
+    int i,j,b;
+    matrix X = make_matrix(50000, 3072);
+    matrix y = make_matrix(50000, 100);
+    d.X = X;
+    d.y = y;
+
+
+    char buff[256];
+    sprintf(buff, "data/cifar/cifar-100-batches-bin/train.bin");
+    FILE *fp = fopen(buff, "rb");
+    if(!fp) file_error(buff);
+    for(i = 0; i < 50000; ++i){
+        unsigned char bytes[3074];
+        fread(bytes, 1, 3074, fp);
+        int class = bytes[1];
+        y.vals[i][class] = 1;
+        for(j = 0; j < X.cols; ++j){
+            X.vals[i][j] = (double)bytes[j+2];
+        }
+    }
+    fclose(fp);
+    //normalize_data_rows(d);
+    //translate_data_rows(d, -128);
+    scale_data_rows(d, 1./255);
+   // smooth_data(d);
+    return d;
+}
+
 data load_cifar10_data(char *filename)
 {
     data d;
