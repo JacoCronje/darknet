@@ -52,10 +52,7 @@ void backward_compact_layer(const layer l, network_state state)
     int i, b;
     for (b=0;b<l.batch;b++)
     {
-        // copy first section
-        axpy_cpu(l.outputs, 1, l.delta+b*l.outputs, 1, state.delta+b*l.inputs, 1);
-        // add other splits
-        for (i=1;i<l.index;i++)
+        for (i=0;i<l.index;i++)
         {
             axpy_cpu(l.outputs, 1, l.delta+b*l.outputs, 1, state.delta+b*l.inputs+i*l.outputs, 1);
         }
@@ -85,10 +82,7 @@ void backward_compact_layer_gpu(const layer l, network_state state)
     int i, b;
     for (b=0;b<l.batch;b++)
     {
-        // copy first section
-        axpy_ongpu(l.outputs, 1, l.delta_gpu+b*l.outputs, 1, state.delta+b*l.inputs, 1);
-        // add other splits
-        for (i=1;i<l.index;i++)
+        for (i=0;i<l.index;i++)
         {
             axpy_ongpu(l.outputs, 1, l.delta_gpu+b*l.outputs, 1, state.delta+b*l.inputs+i*l.outputs, 1);
         }
