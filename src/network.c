@@ -24,6 +24,7 @@
 #include "route_layer.h"
 #include "shortcut_layer.h"
 #include "compact_layer.h"
+#include "sidebyside_layer.h"
 
 int get_current_batch(network net)
 {
@@ -109,6 +110,8 @@ char *get_layer_string(LAYER_TYPE a)
             return "shortcut";
         case COMPACT:
             return "compact";
+        case SIDEBYSIDE:
+            return "sidebyside";
         case NORMALIZATION:
             return "normalization";
         default:
@@ -175,6 +178,8 @@ void forward_network(network net, network_state state)
             forward_shortcut_layer(l, state);
         } else if(l.type == COMPACT){
             forward_compact_layer(l, state);
+        } else if(l.type == SIDEBYSIDE){
+            forward_sidebyside_layer(l, state);
         }
         state.input = l.output;
     }
@@ -285,6 +290,8 @@ void backward_network(network net, network_state state)
             backward_shortcut_layer(l, state);
         } else if(l.type == COMPACT){
             backward_compact_layer(l, state);
+        } else if(l.type == SIDEBYSIDE){
+            backward_sidebyside_layer(l, state);
         }
     }
 }

@@ -24,7 +24,8 @@ typedef enum {
     ACTIVE,
     RNN,
     CRNN,
-    COMPACT
+    COMPACT,
+    SIDEBYSIDE
 } LAYER_TYPE;
 
 typedef enum{

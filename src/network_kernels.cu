@@ -31,6 +31,7 @@ extern "C" {
 #include "route_layer.h"
 #include "shortcut_layer.h"
 #include "compact_layer.h"
+#include "sidebyside_layer.h"
 #include "blas.h"
 }
 
@@ -83,6 +84,8 @@ void forward_network_gpu(network net, network_state state)
             forward_shortcut_layer_gpu(l, state);
         } else if(l.type == COMPACT){
             forward_compact_layer_gpu(l, state);
+        } else if(l.type == SIDEBYSIDE){
+            forward_sidebyside_layer_gpu(l, state);
         }
         state.input = l.output_gpu;
     }
@@ -138,6 +141,8 @@ void backward_network_gpu(network net, network_state state)
             backward_shortcut_layer_gpu(l, state);
         } else if(l.type == COMPACT){
             backward_compact_layer_gpu(l, state);
+        } else if(l.type == SIDEBYSIDE){
+            backward_sidebyside_layer_gpu(l, state);
         }
     }
 }

@@ -22,6 +22,7 @@
 #include "route_layer.h"
 #include "shortcut_layer.h"
 #include "compact_layer.h"
+#include "sidebyside_layer.h"
 #include "list.h"
 #include "option_list.h"
 #include "utils.h"
@@ -47,6 +48,7 @@ int is_normalization(section *s);
 int is_crop(section *s);
 int is_shortcut(section *s);
 int is_compact(section *s);
+int is_sidebyside(section *s);
 int is_cost(section *s);
 int is_detection(section *s);
 int is_route(section *s);
@@ -366,6 +368,19 @@ layer parse_compact(list *options, size_params params, network net)
     return s;
 }
 
+layer parse_sidebyside(list *options, size_params params, network net)
+{
+    char *l = option_find(options, "splits");
+    int splits = atoi(l);
+
+    int batch = params.batch;
+    layer s = make_sidebyside_layer(batch, splits, params.w, params.h, params.c);
+
+    char *activation_s = option_find_str(options, "activation", "linear");
+    ACTIVATION activation = get_activation(activation_s);
+    s.activation = activation;
+    return s;
+}
 
 layer parse_activation(list *options, size_params params)
 {
@@ -574,6 +589,8 @@ network parse_network_cfg(char *filename)
             l = parse_shortcut(options, params, net);
         }else if(is_compact(s)){
             l = parse_compact(options, params, net);
+        }else if(is_sidebyside(s)){
+            l = parse_sidebyside(options, params, net);
         }else if(is_dropout(s)){
             l = parse_dropout(options, params);
             l.output = net.layers[count-1].output;
@@ -613,6 +630,11 @@ int is_compact(section *s)
 {
     return (strcmp(s->type, "[compact]")==0);
 }
+int is_sidebyside(section *s)
+{
+    return (strcmp(s->type, "[sidebyside]")==0);
+}
+
 int is_crop(section *s)
 {
     return (strcmp(s->type, "[crop]")==0);
