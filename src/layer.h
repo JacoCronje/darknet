@@ -25,7 +25,9 @@ typedef enum {
     RNN,
     CRNN,
     COMPACT,
-    SIDEBYSIDE
+    SIDEBYSIDE,
+    SHRINKADD,
+    SHRINKMAX
 } LAYER_TYPE;
 
 typedef enum{

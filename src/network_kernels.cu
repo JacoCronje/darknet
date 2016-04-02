@@ -32,6 +32,8 @@ extern "C" {
 #include "shortcut_layer.h"
 #include "compact_layer.h"
 #include "sidebyside_layer.h"
+#include "shrinkadd_layer.h"
+#include "shrinkmax_layer.h"
 #include "blas.h"
 }
 
@@ -86,6 +88,10 @@ void forward_network_gpu(network net, network_state state)
             forward_compact_layer_gpu(l, state);
         } else if(l.type == SIDEBYSIDE){
             forward_sidebyside_layer_gpu(l, state);
+        } else if(l.type == SHRINKADD){
+            forward_shrinkadd_layer_gpu(l, state);
+        } else if(l.type == SHRINKMAX){
+            forward_shrinkmax_layer_gpu(l, state);
         }
         state.input = l.output_gpu;
     }
@@ -143,6 +149,10 @@ void backward_network_gpu(network net, network_state state)
             backward_compact_layer_gpu(l, state);
         } else if(l.type == SIDEBYSIDE){
             backward_sidebyside_layer_gpu(l, state);
+        } else if(l.type == SHRINKADD){
+            backward_shrinkadd_layer_gpu(l, state);
+        } else if(l.type == SHRINKMAX){
+            backward_shrinkmax_layer_gpu(l, state);
         }
     }
 }

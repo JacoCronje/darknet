@@ -25,6 +25,8 @@
 #include "shortcut_layer.h"
 #include "compact_layer.h"
 #include "sidebyside_layer.h"
+#include "shrinkadd_layer.h"
+#include "shrinkmax_layer.h"
 
 int get_current_batch(network net)
 {
@@ -112,6 +114,10 @@ char *get_layer_string(LAYER_TYPE a)
             return "compact";
         case SIDEBYSIDE:
             return "sidebyside";
+        case SHRINKADD:
+            return "shrinkadd";
+        case SHRINKMAX:
+            return "shrinkmax";
         case NORMALIZATION:
             return "normalization";
         default:
@@ -180,6 +186,10 @@ void forward_network(network net, network_state state)
             forward_compact_layer(l, state);
         } else if(l.type == SIDEBYSIDE){
             forward_sidebyside_layer(l, state);
+        } else if(l.type == SHRINKADD){
+            forward_shrinkadd_layer(l, state);
+        } else if(l.type == SHRINKMAX){
+            forward_shrinkmax_layer(l, state);
         }
         state.input = l.output;
     }
@@ -292,6 +302,10 @@ void backward_network(network net, network_state state)
             backward_compact_layer(l, state);
         } else if(l.type == SIDEBYSIDE){
             backward_sidebyside_layer(l, state);
+        } else if(l.type == SHRINKADD){
+            backward_shrinkadd_layer(l, state);
+        } else if(l.type == SHRINKMAX){
+            backward_shrinkmax_layer(l, state);
         }
     }
 }
