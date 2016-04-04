@@ -549,3 +549,47 @@ extern "C" void routedelta_gpu(int w1, int h1, int c1, float *delta, int w2, int
     check_error(cudaPeekAtLastError());
 }
 
+
+
+__global__ void augmentflip_kernel(int size, int w, int h, float *src, float *out)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % w;
+    id /= w;
+    int y = id % h;
+
+    float f = src[x+y*w];
+    int out_index = (w-x-1)+y*w;
+    out[out_index] = f;
+}
+
+__global__ void augmentflip_delta_kernel(int size, int w, int h, float *src, float *out)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % w;
+    id /= w;
+    int y = id % h;
+
+    float f = src[x+y*w];
+    int out_index = (w-x-1)+y*w;
+    out[out_index] += f;
+}
+
+extern "C" void augmentflip_gpu(int w, int h, float *src, float *dest)
+{
+    int size = w*h;
+    augmentflip_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, src, dest);
+    check_error(cudaPeekAtLastError());
+}
+
+extern "C" void augmentflip_delta_gpu(int w, int h, float *src, float *dest)
+{
+    int size = w*h;
+    augmentflip_delta_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, src, dest);
+    check_error(cudaPeekAtLastError());
+}
+
+
+

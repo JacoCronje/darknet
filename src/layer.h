@@ -27,7 +27,8 @@ typedef enum {
     COMPACT,
     SIDEBYSIDE,
     SHRINKADD,
-    SHRINKMAX
+    SHRINKMAX,
+    AUGMENT
 } LAYER_TYPE;
 
 typedef enum{

@@ -34,6 +34,7 @@ extern "C" {
 #include "sidebyside_layer.h"
 #include "shrinkadd_layer.h"
 #include "shrinkmax_layer.h"
+#include "augment_layer.h"
 #include "blas.h"
 }
 
@@ -92,6 +93,8 @@ void forward_network_gpu(network net, network_state state)
             forward_shrinkadd_layer_gpu(l, state);
         } else if(l.type == SHRINKMAX){
             forward_shrinkmax_layer_gpu(l, state);
+        } else if(l.type == AUGMENT){
+            forward_augment_layer_gpu(l, state);
         }
         state.input = l.output_gpu;
     }
@@ -153,6 +156,8 @@ void backward_network_gpu(network net, network_state state)
             backward_shrinkadd_layer_gpu(l, state);
         } else if(l.type == SHRINKMAX){
             backward_shrinkmax_layer_gpu(l, state);
+        } else if(l.type == AUGMENT){
+            backward_augment_layer_gpu(l, state);
         }
     }
 }

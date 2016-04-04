@@ -25,6 +25,7 @@
 #include "sidebyside_layer.h"
 #include "shrinkadd_layer.h"
 #include "shrinkmax_layer.h"
+#include "augment_layer.h"
 #include "list.h"
 #include "option_list.h"
 #include "utils.h"
@@ -56,6 +57,8 @@ int is_shrinkmax(section *s);
 int is_cost(section *s);
 int is_detection(section *s);
 int is_route(section *s);
+int is_augment(section *s);
+
 list *read_cfg(char *filename);
 
 void free_section(section *s)
@@ -414,6 +417,21 @@ layer parse_shrinkmax(list *options, size_params params, network net)
     return s;
 }
 
+
+layer parse_augment(list *options, size_params params, network net)
+{
+    char *l = option_find(options, "splits");
+    int splits = atoi(l);
+
+    int batch = params.batch;
+    layer s = make_augment_layer(batch, splits, params.w, params.h, params.c);
+
+    char *activation_s = option_find_str(options, "activation", "linear");
+    ACTIVATION activation = get_activation(activation_s);
+    s.activation = activation;
+    return s;
+}
+
 layer parse_activation(list *options, size_params params)
 {
     char *activation_s = option_find_str(options, "activation", "linear");
@@ -627,6 +645,8 @@ network parse_network_cfg(char *filename)
             l = parse_shrinkadd(options, params, net);
         }else if(is_shrinkmax(s)){
             l = parse_shrinkmax(options, params, net);
+        }else if(is_augment(s)){
+            l = parse_augment(options, params, net);
         }else if(is_dropout(s)){
             l = parse_dropout(options, params);
             l.output = net.layers[count-1].output;
@@ -673,6 +693,10 @@ int is_sidebyside(section *s)
 int is_shrinkadd(section *s)
 {
     return (strcmp(s->type, "[shrinkadd]")==0);
+}
+int is_augment(section *s)
+{
+    return (strcmp(s->type, "[augment]")==0);
 }
 int is_shrinkmax(section *s)
 {

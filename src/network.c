@@ -114,6 +114,8 @@ char *get_layer_string(LAYER_TYPE a)
             return "compact";
         case SIDEBYSIDE:
             return "sidebyside";
+        case AUGMENT:
+            return "augment";
         case SHRINKADD:
             return "shrinkadd";
         case SHRINKMAX:
@@ -184,6 +186,8 @@ void forward_network(network net, network_state state)
             forward_shortcut_layer(l, state);
         } else if(l.type == COMPACT){
             forward_compact_layer(l, state);
+        } else if(l.type == AUGMENT){
+            forward_augment_layer(l, state);
         } else if(l.type == SIDEBYSIDE){
             forward_sidebyside_layer(l, state);
         } else if(l.type == SHRINKADD){
@@ -302,6 +306,8 @@ void backward_network(network net, network_state state)
             backward_compact_layer(l, state);
         } else if(l.type == SIDEBYSIDE){
             backward_sidebyside_layer(l, state);
+        } else if(l.type == AUGMENT){
+            backward_augment_layer(l, state);
         } else if(l.type == SHRINKADD){
             backward_shrinkadd_layer(l, state);
         } else if(l.type == SHRINKMAX){

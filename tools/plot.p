@@ -11,10 +11,17 @@ set xrange []
 set yrange [0:1]
 set grid
 set terminal wxt size 1300,600
-plot "out.csv" using 1:2 title 'shrink_add' with linespoints pt 7, \
-"out.csv" using 1:6 title 'compact' with linespoints pt 7, \
-"out.csv" using 1:10 title 'shrink_add_64' with linespoints pt 7, \
-"out.csv" using 1:12 title 'tst_shrink_add_64' with linespoints pt 7
-#"out.csv" using 1:4 title 'tst_shrink_add' with linespoints pt 7, \
-#"out.csv" using 1:8 title 'tst_compact' with linespoints pt 7
+set key autotitle columnhead
+plot "out.csv" using 1:2 with linespoints pt 7, \
+"out.csv" using 1:6  with linespoints pt 7, \
+"out.csv" using 1:10 with linespoints pt 7, \
+"out.csv" using 1:14  with linespoints pt 7, \
+"out.csv" using 1:18  with linespoints pt 7, \
+"out.csv" using 1:22  with linespoints pt 7
+plot "out.csv" using 1:4 with linespoints pt 7, \
+"out.csv" using 1:8  with linespoints pt 7, \
+"out.csv" using 1:12 with linespoints pt 7, \
+"out.csv" using 1:16  with linespoints pt 7, \
+"out.csv" using 1:20  with linespoints pt 7, \
+"out.csv" using 1:24  with linespoints pt 7
 pause -1
