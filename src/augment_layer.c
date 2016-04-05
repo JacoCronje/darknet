@@ -17,7 +17,7 @@ layer make_augment_layer(int batch, int splits, int w, int h, int c)
         l.h = h;
         l.c = c;
         l.out_w = w;
-        l.out_h = h*2;
+        l.out_h = h*2+10;
         l.out_c = c;
     }
     if (splits==-1)
@@ -26,7 +26,7 @@ layer make_augment_layer(int batch, int splits, int w, int h, int c)
         l.h = h;
         l.c = c;
         l.out_w = w;
-        l.out_h = h/2;
+        l.out_h = (h-10)/2;
         l.out_c = c;
     }
     l.outputs = l.out_w * l.out_h * l.out_c;
@@ -83,6 +83,7 @@ void forward_augment_layer_gpu(const layer l, network_state state)
     {
         if (l.index==1)
         {
+            const_ongpu(l.out_h*l.out_w*l.c, 0, l.output_gpu+b*l.outputs, 1);
             for (c=0;c<l.c;c++)
             {
                 copy_ongpu(l.w*l.h, state.input+b*l.inputs+l.w*l.h*c, 1,
@@ -91,7 +92,7 @@ void forward_augment_layer_gpu(const layer l, network_state state)
             for (c=0;c<l.c;c++)
             {
                 augmentflip_gpu(l.w, l.h, state.input+b*l.inputs+l.w*l.h*c,
-                                l.output_gpu+b*l.outputs+c*l.out_h*l.out_w+l.w*l.h);
+                                l.output_gpu+b*l.outputs+c*l.out_h*l.out_w+l.w*(10+l.h));
             }
         } else if (l.index==-1)
         {
@@ -102,7 +103,7 @@ void forward_augment_layer_gpu(const layer l, network_state state)
             }
             for (c=0;c<l.c;c++)
             {
-                augmentflip_delta_gpu(l.out_w, l.out_h, state.input+b*l.inputs+l.w*l.h*c+l.out_h*l.out_w,
+                augmentflip_delta_gpu(l.out_w, l.out_h, 1.0, state.input+b*l.inputs+l.w*l.h*c+(10+l.out_h)*l.out_w,
                                 l.output_gpu+b*l.outputs+c*l.out_h*l.out_w);
             }
         }
@@ -120,25 +121,25 @@ void backward_augment_layer_gpu(const layer l, network_state state)
         {
             for (c=0;c<l.c;c++)
             {
-                axpy_ongpu(l.w*l.h, 1, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w, 1,
+                axpy_ongpu(l.w*l.h, 0.5, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w, 1,
                                        state.delta+b*l.inputs+l.w*l.h*c, 1);
             }
             for (c=0;c<l.c;c++)
             {
-                augmentflip_delta_gpu(l.w, l.h, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w+l.w*l.h,
+                augmentflip_delta_gpu(l.w, l.h, 0.5, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w+l.w*(10+l.h),
                                                 state.delta+b*l.inputs+l.w*l.h*c);
             }
         } else if (l.index==-1)
         {
             for (c=0;c<l.c;c++)
             {
-                axpy_ongpu(l.out_h*l.out_w, 1, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w, 1,
+                axpy_ongpu(l.out_h*l.out_w, 0.5, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w, 1,
                                        state.delta+b*l.inputs+l.w*l.h*c, 1);
             }
             for (c=0;c<l.c;c++)
             {
-                augmentflip_delta_gpu(l.out_w, l.out_h, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w,
-                                                state.delta+b*l.inputs+l.w*l.h*c+l.out_w*l.out_h);
+                augmentflip_delta_gpu(l.out_w, l.out_h, 0.5, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w,
+                                                state.delta+b*l.inputs+l.w*l.h*c+l.out_w*(10+l.out_h));
             }
         }
     }

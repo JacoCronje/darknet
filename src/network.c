@@ -27,6 +27,7 @@
 #include "sidebyside_layer.h"
 #include "shrinkadd_layer.h"
 #include "shrinkmax_layer.h"
+#include "augment_layer.h"
 
 int get_current_batch(network net)
 {
@@ -628,10 +629,12 @@ float network_accuracy(network net, data d)
 
 float *network_accuracies(network net, data d, int n)
 {
-    static float acc[2];
+    static float acc[3];
     matrix guess = network_predict_data(net, d);
     acc[0] = matrix_topk_accuracy(d.y, guess, 1);
     acc[1] = matrix_topk_accuracy(d.y, guess, n);
+    acc[2] = matrix_mse(d.y, guess);
+
     free_matrix(guess);
     return acc;
 }

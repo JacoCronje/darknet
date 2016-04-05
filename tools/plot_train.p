@@ -18,6 +18,7 @@ plot "out.csv" using 1:2 with linespoints pt 7, \
 "out.csv" using 1:14  with linespoints pt 7, \
 "out.csv" using 1:18  with linespoints pt 7, \
 "out.csv" using 1:22  with linespoints pt 7
+pause -1
 plot "out.csv" using 1:4 with linespoints pt 7, \
 "out.csv" using 1:8  with linespoints pt 7, \
 "out.csv" using 1:12 with linespoints pt 7, \

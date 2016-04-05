@@ -19,4 +19,6 @@ matrix resize_matrix(matrix m, int size);
 
 float *pop_column(matrix *m, int c);
 
+float matrix_mse(matrix truth, matrix guess);
+
 #endif

@@ -66,7 +66,7 @@ void routescale_gpu(int w1, int h1, int c1, float *src, int w2, int h2, int c2, 
 void routedelta_gpu(int w1, int h1, int c1, float *delta, int w2, int h2, int c2, float *src);
 
 void augmentflip_gpu(int w, int h, float *src, float *dest);
-void augmentflip_delta_gpu(int w, int h, float *src, float *dest);
+void augmentflip_delta_gpu(int w, int h, float ALPHA, float *src, float *dest);
 
 #endif
 #endif

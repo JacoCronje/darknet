@@ -33,6 +33,22 @@ float matrix_topk_accuracy(matrix truth, matrix guess, int k)
     return (float)correct/truth.rows;
 }
 
+float matrix_mse(matrix truth, matrix guess)
+{
+    int n = truth.cols;
+    int i,j;
+    float err = 0;
+    for(i = 0; i < truth.rows; ++i)
+    {
+        for (j=0;j<n;j++)
+        {
+            if (truth.vals[i][j])
+                err += (truth.vals[i][j]-guess.vals[i][j])*(truth.vals[i][j]-guess.vals[i][j]);
+        }
+    }
+    return (float)err/(truth.rows);
+}
+
 void scale_matrix(matrix m, float scale)
 {
     int i,j;

@@ -564,7 +564,7 @@ __global__ void augmentflip_kernel(int size, int w, int h, float *src, float *ou
     out[out_index] = f;
 }
 
-__global__ void augmentflip_delta_kernel(int size, int w, int h, float *src, float *out)
+__global__ void augmentflip_delta_kernel(int size, int w, int h, float ALPHA, float *src, float *out)
 {
     int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if (id >= size) return;
@@ -572,7 +572,7 @@ __global__ void augmentflip_delta_kernel(int size, int w, int h, float *src, flo
     id /= w;
     int y = id % h;
 
-    float f = src[x+y*w];
+    float f = src[x+y*w] * ALPHA;
     int out_index = (w-x-1)+y*w;
     out[out_index] += f;
 }
@@ -584,10 +584,10 @@ extern "C" void augmentflip_gpu(int w, int h, float *src, float *dest)
     check_error(cudaPeekAtLastError());
 }
 
-extern "C" void augmentflip_delta_gpu(int w, int h, float *src, float *dest)
+extern "C" void augmentflip_delta_gpu(int w, int h, float ALPHA, float *src, float *dest)
 {
     int size = w*h;
-    augmentflip_delta_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, src, dest);
+    augmentflip_delta_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, ALPHA, src, dest);
     check_error(cudaPeekAtLastError());
 }
 

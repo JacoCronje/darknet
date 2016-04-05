@@ -74,11 +74,13 @@ void train_cifar(char *cfgfile, char *weightfile)
             float *acc = network_accuracies(net, test, 2);
             a[2] = acc[0];
             a[3] = acc[1];
+            float mse1 = acc[2];
             float *accT = network_accuracies(net, train, 2);
             a[0] = accT[0];
             a[1] = accT[1];
-            fprintf(stderr, "Accuracy: train(%f %f) test(%f %f)\n", a[0], a[1], a[2], a[3]);
-            fprintf(stdout, "Accuracy: train(%f %f) test(%f %f)\n", a[0], a[1], a[2], a[3]);
+            float mse2 = accT[2];
+            fprintf(stderr, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse1, a[2], a[3], mse2);
+            fprintf(stdout, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse1, a[2], a[3], mse2);
             fflush(stdout);
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights",backup_directory,base, get_current_batch(net));
