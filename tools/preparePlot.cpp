@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
         return 0;
     }
     vector<int> iter;
-    vector<double> dt[256];
+    vector<double> dt[2048];
     int n = argc-2;
     string outFile = argv[1];
     cout << "Creating " << outFile << endl;
@@ -87,10 +87,12 @@ int main(int argc, char *argv[])
                 {
                     iter.push_back(lasti);
                 }
-                dt[i*4].push_back(atof(tok1[0].c_str()));
-                dt[i*4+1].push_back(atof(tok1[1].c_str()));
-                dt[i*4+2].push_back(atof(tok2[0].c_str()));
-                dt[i*4+3].push_back(atof(tok2[1].c_str()));
+                dt[i*6].push_back(atof(tok1[0].c_str()));
+                dt[i*6+1].push_back(atof(tok1[1].c_str()));
+                dt[i*6+2].push_back(atof(tok1[2].c_str()));
+                dt[i*6+3].push_back(atof(tok2[0].c_str()));
+                dt[i*6+4].push_back(atof(tok2[1].c_str()));
+                dt[i*6+5].push_back(atof(tok2[2].c_str()));
             } else
             {
                 vector<string> tok = tokenize(s, ',');
@@ -114,9 +116,13 @@ int main(int argc, char *argv[])
         fo << s << ", ";
         fo << "train_top5_";
         fo << s << ", ";
+        fo << "train_mse_";
+        fo << s << ", ";
         fo << "test_top1_";
         fo << s << ", ";
         fo << "test_top5_";
+        fo << s << ", ";
+        fo << "test_mse_";
         fo << s;
         if (i<n-1)
             fo << ", ";
@@ -125,7 +131,7 @@ int main(int argc, char *argv[])
     for (int i=0;i<dt[0].size();i++)
     {
         fo << iter[i];
-        for (int j=0;j<n*4;j++)
+        for (int j=0;j<n*6;j++)
             fo << ", " << dt[j][i];
         fo << endl;
     }
