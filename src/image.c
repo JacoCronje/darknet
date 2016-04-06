@@ -223,7 +223,21 @@ image collapse_image_layers(image source, int border)
     int h = source.h;
     h = (h+border)*source.c - border;
     image dest = make_image(source.w, h, 1);
-    int i;
+    int i, j;
+
+    // get max
+    float maxv = -1e10;
+    for(i = 0; i < source.c; ++i){
+        image layer = get_image_layer(source, i);
+        for(j = 0; j < layer.w * layer.h * layer.c; ++j){
+            if (layer.data[j]>maxv) maxv = layer.data[j];
+        }
+        free_image(layer);
+    }
+    for(i = 0; i < dest.w * dest.h * dest.c; ++i){
+        dest.data[i] = maxv;
+    }
+
     for(i = 0; i < source.c; ++i){
         image layer = get_image_layer(source, i);
         int h_offset = i*(source.h+border);
