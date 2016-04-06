@@ -12,10 +12,10 @@ set yrange [0:]
 set grid
 set terminal wxt size 1300,600
 set key autotitle columnhead
-plot "out.csv" using 1:6 with linespoints pt 7, \
-"out.csv" using 1:12  with linespoints pt 7, \
-"out.csv" using 1:18 with linespoints pt 7, \
-"out.csv" using 1:24  with linespoints pt 7, \
-"out.csv" using 1:28  with linespoints pt 7, \
-"out.csv" using 1:34  with linespoints pt 7
+plot "out.csv" using 1:5 with linespoints pt 7, \
+"out.csv" using 1:11  with linespoints pt 7, \
+"out.csv" using 1:17 with linespoints pt 7, \
+"out.csv" using 1:23  with linespoints pt 7, \
+"out.csv" using 1:27  with linespoints pt 7, \
+"out.csv" using 1:33  with linespoints pt 7
 pause -1
