@@ -76,6 +76,7 @@ struct layer{
     int does_cost;
     int joint;
     int noadjust;
+    int gap;
 
     float alpha;
     float beta;
