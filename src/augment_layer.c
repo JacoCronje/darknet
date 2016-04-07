@@ -17,14 +17,14 @@ layer make_augment_layer(int batch, int splits, int gap, int n_angles, int* angl
     l.c = c;
     if (splits==1) // Flip
     {
-        fprintf(stderr,"augment Layer: Flip. Gap = %d\n", gap, splits);
+        fprintf(stderr,"augment Layer: Flip. Gap = %d\n", gap);
         l.out_w = w;
         l.out_h = h*2+l.gap;
         l.out_c = c;
     }
     else if (splits==-1) // Flip
     {
-        fprintf(stderr,"augment Layer: Merge Flip. Gap = %d\n", gap, splits);
+        fprintf(stderr,"augment Layer: Merge Flip. Gap = %d\n", gap);
         l.out_w = w;
         l.out_h = (h-l.gap)/2;
         l.out_c = c;
@@ -144,7 +144,7 @@ void backward_augment_layer_gpu(const layer l, network_state state)
         } else if (l.index==2)
         {
             // rotate
-            float factor = 1.0 / (1+l.n_angles);
+            float factor = 1.0;// / (1+l.n_angles);
             for (c=0;c<l.c;c++)
             {
                 axpy_ongpu(l.w*l.h, factor, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w, 1,
