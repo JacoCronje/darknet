@@ -31,7 +31,7 @@ layer make_augment_layer(int batch, int splits, int gap, int n_angles, int* angl
     }
     else if (splits==2) // Rotation
     {
-        fprintf(stderr,"augment Layer: Rotate. Gap = %d Angles = %d", gap, splits,angles[0]);
+        fprintf(stderr,"augment Layer: Rotate. Gap = %d Angles = %d", gap, angles[0]);
         for (i=1;i<n_angles;i++)
             fprintf(stderr, ",%d", angles[i]);
         fprintf(stderr, "\n");
