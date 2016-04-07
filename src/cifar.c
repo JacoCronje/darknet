@@ -220,17 +220,7 @@ void test_cifar(char *filename, char *weightfile)
     avg_top5 += acc[1];
     printf("top1: %f, %lf seconds, %d images\n", avg_acc, sec(clock()-time), test.X.rows);
 
-
-    int nl = 9;
-    int h,w,c;
-    h = 28;//convolutional_out_height(net.layers[nl]);
-    w = 28;//convolutional_out_width(net.layers[nl]);
-    c = 48;//net.layers[nl].out_c;
-    cuda_pull_array(net.layers[nl].output_gpu, net.layers[nl].output, net.layers[nl].outputs);
-    image img = float_to_image(w,h,c,net.layers[nl].output);
-    image img2 = collapse_image_layers(img, 1);
-    normalize_image(img2);
-    save_image(img2, "test.png");
+    save_network_feature_maps(net, 0, net.n-3, "network", 10, 2);
 
     free_data(test);
 }

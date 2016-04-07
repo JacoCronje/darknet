@@ -6,7 +6,7 @@
 
 layer make_compact_layer(int batch, int splits, int w, int h, int c)
 {
-    fprintf(stderr,"Compact Layer: Split and merge channels in %d groups.\n", splits);
+    fprintf(stderr,"Compact Layer: Split and merge channels in %d groups. %d %d %d\n", splits,w ,h ,c);
     layer l = {0};
     l.type = COMPACT;
     l.batch = batch;
