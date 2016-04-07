@@ -422,9 +422,28 @@ layer parse_augment(list *options, size_params params, network net)
 {
     int splits = option_find_int(options, "splits", 1);
     int gap = option_find_int_quiet(options, "gap", 10);
+    int *angles = 0;
+    int n_angles = 0;
+
+    char *l = option_find(options, "angles");
+    if (l)
+    {
+        int len = strlen(l);
+        n_angles = 1;
+        int i;
+        for(i = 0; i < len; ++i){
+            if (l[i] == ',') ++n_angles;
+        }
+        angles = calloc(n_angles, sizeof(int));
+        for(i = 0; i < n_angles; ++i){
+            int angle = atoi(l);
+            l = strchr(l, ',')+1;
+            angles[i] = angle;
+        }
+    }
 
     int batch = params.batch;
-    layer s = make_augment_layer(batch, splits, gap, params.w, params.h, params.c);
+    layer s = make_augment_layer(batch, splits, gap, n_angles, angles, params.w, params.h, params.c);
 
     char *activation_s = option_find_str(options, "activation", "linear");
     ACTIVATION activation = get_activation(activation_s);

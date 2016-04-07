@@ -67,6 +67,8 @@ void routedelta_gpu(int w1, int h1, int c1, float *delta, int w2, int h2, int c2
 
 void augmentflip_gpu(int w, int h, float *src, float *dest);
 void augmentflip_delta_gpu(int w, int h, float ALPHA, float *src, float *dest);
+void augmentrotate_gpu(int w, int h, float *src, float *dest, int ang);
+void augmentrotate_delta_gpu(int w, int h, float ALPHA, float *src, float *dest, int ang);
 
 #endif
 #endif

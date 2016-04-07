@@ -592,4 +592,78 @@ extern "C" void augmentflip_delta_gpu(int w, int h, float ALPHA, float *src, flo
 }
 
 
+__device__ float get_pixel_kernel(float *image, int w, int h, int x, int y)
+{
+    if(x < 0 || x >= w || y < 0 || y >= h) return 0;
+    return image[x + w*y];
+}
+
+__device__ float bilinear_interpolate_kernel(float *image, int w, int h, float x, float y)
+{
+    int ix = (int) floorf(x);
+    int iy = (int) floorf(y);
+
+    float dx = x - ix;
+    float dy = y - iy;
+
+    float val = (1-dy) * (1-dx) * get_pixel_kernel(image, w, h, ix, iy) +
+        dy     * (1-dx) * get_pixel_kernel(image, w, h, ix, iy+1) +
+        (1-dy) *   dx   * get_pixel_kernel(image, w, h, ix+1, iy) +
+        dy     *   dx   * get_pixel_kernel(image, w, h, ix+1, iy+1);
+    return val;
+}
+
+
+__global__ void augmentrotate_kernel(int size, int w, int h, float *src, float *out, float angle)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % w;
+    id /= w;
+    int y = id % h;
+
+    int cx = w/2;
+    int cy = h/2;
+
+    float rx = cos(angle)*(x-cx) - sin(angle)*(y-cy) + cx;
+    float ry = sin(angle)*(x-cx) + cos(angle)*(y-cy) + cy;
+    int out_index = x+y*w;
+    out[out_index] = bilinear_interpolate_kernel(src, w, h, rx, ry);
+}
+
+__global__ void augmentrotate_delta_kernel(int size, int w, int h, float ALPHA, float *src, float *out, float angle)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % w;
+    id /= w;
+    int y = id % h;
+
+    int cx = w/2;
+    int cy = h/2;
+
+    float rx = cos(angle)*(x-cx) - sin(angle)*(y-cy) + cx;
+    float ry = sin(angle)*(x-cx) + cos(angle)*(y-cy) + cy;
+    int out_index = x+y*w;
+    out[out_index] += ALPHA*bilinear_interpolate_kernel(src, w, h, rx, ry);
+
+}
+
+extern "C" void augmentrotate_gpu(int w, int h, float *src, float *dest, int ang)
+{
+    float radians = (float)(ang)*3.14159265/180.;
+    int size = w*h;
+    augmentrotate_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, src, dest, radians);
+    check_error(cudaPeekAtLastError());
+}
+
+extern "C" void augmentrotate_delta_gpu(int w, int h, float ALPHA, float *src, float *dest, int ang)
+{
+    float radians = -(float)(ang)*3.14159265/180.;
+    int size = w*h;
+    augmentrotate_delta_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, ALPHA, src, dest, radians);
+    check_error(cudaPeekAtLastError());
+}
+
+
 
