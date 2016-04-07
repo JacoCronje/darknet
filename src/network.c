@@ -662,3 +662,45 @@ void free_network(network net)
     if(net.truth_gpu) free(net.truth_gpu);
     #endif
 }
+
+void save_network_feature_maps(network net, int layerFrom, int layerTo, char* filename, int hgap, int vgap)
+{
+    int lay;
+    image imgLay[512];
+    int mh = 0;
+    int mw = 0;
+    int mc = 0;
+    for (lay=layerFrom;lay<=layerTo;lay++)
+    {
+        int h,w,c;
+        h = net.layers[lay].out_h;
+        w = net.layers[lay].out_w;
+        c = net.layers[lay].out_c;
+#ifdef GPU
+        cuda_pull_array(net.layers[lay].output_gpu, net.layers[lay].output, net.layers[lay].outputs);
+#endif
+        image img = float_to_image(w,h,c,net.layers[lay].output);
+        imgLay[lay] = collapse_image_layers(img, vgap);
+        normalize_image(imgLay[lay]);
+       // char buf[128];
+       // sprintf(buf, "layer%d", lay);
+       // save_image(imgLay[lay], buf);
+        if (imgLay[lay].h>mh) mh = imgLay[lay].h;
+        if (imgLay[lay].c>mc) mc = imgLay[lay].c;
+        mw += imgLay[lay].w + hgap;
+    }
+    image all = make_image(mw, mh, mc);
+    int i;
+    for(i = 0; i < all.w * all.h * all.c; ++i){
+        all.data[i] = 1;
+    }
+    int xp = 0;
+    for (lay=layerFrom;lay<=layerTo;lay++)
+    {
+        embed_image(imgLay[lay], all, xp, 0);
+        xp += imgLay[lay].w+hgap;
+    }
+    save_image(all, filename);
+}
+
+

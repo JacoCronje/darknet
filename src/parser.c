@@ -420,11 +420,11 @@ layer parse_shrinkmax(list *options, size_params params, network net)
 
 layer parse_augment(list *options, size_params params, network net)
 {
-    char *l = option_find(options, "splits");
-    int splits = atoi(l);
+    int splits = option_find_int(options, "splits", 1);
+    int gap = option_find_int_quiet(options, "gap", 10);
 
     int batch = params.batch;
-    layer s = make_augment_layer(batch, splits, params.w, params.h, params.c);
+    layer s = make_augment_layer(batch, splits, gap, params.w, params.h, params.c);
 
     char *activation_s = option_find_str(options, "activation", "linear");
     ACTIVATION activation = get_activation(activation_s);

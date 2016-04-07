@@ -102,6 +102,8 @@ void set_batch_network(network *net, int b);
 int get_network_input_size(network net);
 float get_network_cost(network net);
 
+void save_network_feature_maps(network net, int layerFrom, int layerTo, char* filename, int hgap, int vgap);
+
 int get_network_nuisance(network net);
 int get_network_background(network net);
 
