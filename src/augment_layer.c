@@ -1,6 +1,7 @@
 #include "augment_layer.h"
 #include "cuda.h"
 #include "blas.h"
+#include "utils.h"
 #include <stdio.h>
 #include <assert.h>
 
@@ -17,14 +18,14 @@ layer make_augment_layer(int batch, int splits, int gap, int n_angles, int* angl
     l.c = c;
     if (splits==1) // Flip
     {
-        fprintf(stderr,"augment Layer: Flip. Gap = %d\n", gap);
+        fprintf(stderr,"augment Layer: Flip. Gap = %d", gap);
         l.out_w = w;
         l.out_h = h*2+l.gap;
         l.out_c = c;
     }
     else if (splits==-1) // Flip
     {
-        fprintf(stderr,"augment Layer: Merge Flip. Gap = %d\n", gap);
+        fprintf(stderr,"augment Layer: Merge Flip. Gap = %d", gap);
         l.out_w = w;
         l.out_h = (h-l.gap)/2;
         l.out_c = c;
@@ -34,7 +35,6 @@ layer make_augment_layer(int batch, int splits, int gap, int n_angles, int* angl
         fprintf(stderr,"augment Layer: Rotate. Gap = %d Angles = %d", gap, angles[0]);
         for (i=1;i<n_angles;i++)
             fprintf(stderr, ",%d", angles[i]);
-        fprintf(stderr, "\n");
         l.n_angles = n_angles;
         l.angles = angles;
         l.out_w = w;
@@ -45,7 +45,7 @@ layer make_augment_layer(int batch, int splits, int gap, int n_angles, int* angl
     {
         error("Invalid augmentation type.");
     }
-
+    fprintf(stderr, ": %d x %d x %d image, -> %d x %d x %d image\n", l.h,l.w,l.c, l.out_h, l.out_w, l.out_c);
 
     l.outputs = l.out_w * l.out_h * l.out_c;
     l.inputs = w*h*c;
@@ -125,6 +125,7 @@ void forward_augment_layer_gpu(const layer l, network_state state)
 void backward_augment_layer_gpu(const layer l, network_state state)
 {
     gradient_array_ongpu(l.output_gpu, l.outputs*l.batch, l.activation, l.delta_gpu);
+    if (!state.delta) return;
     int c, b, a;
     for (b=0;b<l.batch;b++)
     {
