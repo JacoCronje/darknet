@@ -32,10 +32,8 @@ void train_cifar(char *cfgfile, char *weightfile)
 
     fprintf(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net.learning_rate, net.momentum, net.decay);
 
-    int classes = cifar_set;
     int N = 50000;
 
-    int epoch = (*net.seen)/N;
     data train;
     data test;
     if (cifar_set==10)
@@ -51,6 +49,9 @@ void train_cifar(char *cfgfile, char *weightfile)
     clock_t time=clock();
     float a[4];
 
+    char backup_net[256];
+    int nanCount = 0;
+
     while(get_current_batch(net) < net.max_batches || net.max_batches == 0){
 
         float loss = train_network_sgd(net, train, 1);
@@ -62,6 +63,15 @@ void train_cifar(char *cfgfile, char *weightfile)
             fprintf(stdout, "%d, %.3f: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), (float)(*net.seen)/N, loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
             fflush(stdout);
             time=clock();
+        }
+        if (isnan(loss) || isnan(avg_loss))
+        {
+            // NaN detected!!!
+            free_network(net);
+            load_weights(&net, backup_net);
+            nanCount++;
+            if (nanCount>=5) break;
+            continue;
         }
 //        if(*net.seen/N > epoch){
 //            epoch = *net.seen/N;
@@ -84,7 +94,9 @@ void train_cifar(char *cfgfile, char *weightfile)
             fflush(stdout);
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights",backup_directory,base, get_current_batch(net));
+            sprintf(backup_net, "%s/%s_%d.weights",backup_directory,base, get_current_batch(net));
             save_weights(net, buff);
+            nanCount = 0;
         }
 
 //        if(get_current_batch(net)%100 == 0){
@@ -170,22 +182,29 @@ void test_cifar_multi(char *filename, char *weightfile)
     srand(time(0));
 
     float avg_acc = 0;
-    data test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
+    data test;
+    if (cifar_set==10)
+    {
+        test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
+    } else
+    {
+        test = load_cifar100_data("data/cifar/cifar-100-batches-bin/test.bin");
+    }
 
     int i;
     for(i = 0; i < test.X.rows; ++i){
         image im = float_to_image(32, 32, 3, test.X.vals[i]);
 
-        float pred[10] = {0};
+        float pred[100] = {0};
 
         float *p = network_predict(net, im.data);
-        axpy_cpu(10, 1, p, 1, pred, 1);
+        axpy_cpu(cifar_set, 1, p, 1, pred, 1);
         flip_image(im);
         p = network_predict(net, im.data);
-        axpy_cpu(10, 1, p, 1, pred, 1);
+        axpy_cpu(cifar_set, 1, p, 1, pred, 1);
 
-        int index = max_index(pred, 10);
-        int class = max_index(test.y.vals[i], 10);
+        int index = max_index(pred, cifar_set);
+        int class = max_index(test.y.vals[i], cifar_set);
         if(index == class) avg_acc += 1;
         free_image(im);
         printf("%4d: %.2f%%\n", i, 100.*avg_acc/(i+1));
