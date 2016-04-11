@@ -13,4 +13,10 @@ void forward_augment_layer_gpu(const layer l, network_state state);
 void backward_augment_layer_gpu(const layer l, network_state state);
 #endif
 
+//void augmentflip_gpu(int w, int h, float *src, float *dest);
+//void augmentflip_delta_gpu(int w, int h, float ALPHA, float *src, float *dest);
+//void augmentrotate_gpu(int w, int h, float *src, float *dest, int ang);
+//void augmentrotate_delta_gpu(int w, int h, float ALPHA, float *src, float *dest, int ang);
+
+
 #endif
