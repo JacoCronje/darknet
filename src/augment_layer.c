@@ -144,7 +144,7 @@ void backward_augment_layer_gpu(const layer l, network_state state)
     {
         if (l.index==1)
         {
-//            // flip
+            // flip
 //            for (c=0;c<l.c;c++)
 //            {
 //                axpy_ongpu(l.w*l.h, 0.5, l.delta_gpu+b*l.outputs+c*l.out_h*l.out_w, 1,

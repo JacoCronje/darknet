@@ -140,17 +140,17 @@ __global__ void forward_augment_flip_kernel(int n, int out_w, int out_h, int out
     id /= out_c;
     int b = id;
 
-    int widx = x + y*out_w + c*out_w*out_h + b*out_c*out_w*out_h;
-    int val = 0;
+    int widx = x + out_w*(y + out_h*(c + b*out_c));
+    float val = 0;
     if (y<h)
     {
         // copy
-        int ridx = x + y*w + c*w*h + b*w*h*out_c;
+        int ridx = x + w*(y + h*(c + b*out_c));
         val = src[ridx];
     } else if (y>=h+gap)
     {
         // flip
-        int ridx = (w-x-1) + (y-gap-h)*w + c*w*h + b*w*h*out_c;
+        int ridx = (w-x-1) + w*((y-gap-h) + h*(c + b*out_c));
         val = src[ridx];
     }
     dest[widx] = val;
