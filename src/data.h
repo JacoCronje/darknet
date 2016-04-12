@@ -79,6 +79,8 @@ data load_all_cifar10();
 data load_cifar100_data(char *filename);
 data load_all_cifar100();
 
+data load_stl10_data(char *filenameImages, char *filenameLabels, int N);
+
 data load_data_writing(char **paths, int n, int m, int w, int h, int out_w, int out_h);
 
 list *get_paths(char *filename);

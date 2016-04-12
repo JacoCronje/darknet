@@ -908,6 +908,51 @@ data load_cifar10_data(char *filename)
     return d;
 }
 
+data load_stl10_data(char *filenameImages, char *filenameLabels, int N)
+{
+    data d;
+    d.shallow = 0;
+    long i,j;
+    matrix X = make_matrix(N, 96*96*3);
+    matrix y = make_matrix(N, 10);
+    d.X = X;
+    d.y = y;
+    int c,xx,yy;
+
+    FILE *fp = fopen(filenameImages, "rb");
+    if(!fp) file_error(filenameImages);
+    FILE *fpLbl = fopen(filenameLabels, "rb");
+    if(!fpLbl) file_error(filenameLabels);
+    unsigned char lbl[N];
+    fread(lbl, 1, N, fpLbl);
+    fclose(fpLbl);
+
+    for(i = 0; i < N; ++i){
+        unsigned char bytes[96*96*3];
+        fread(bytes, 1, 96*96*3, fp);
+        // transpose
+        unsigned char img[96*96*3];
+        for (c=0;c<3;c++)
+        {
+            for (yy=0;yy<96;yy++)
+                for (xx=0;xx<96;xx++)
+                {
+                    img[c*96*96+xx+yy*96] = bytes[c*96*96+yy+xx*96];
+                }
+        }
+        int class = lbl[i] - 1;
+        y.vals[i][class] = 1;
+        for(j = 0; j < X.cols; ++j){
+            X.vals[i][j] = (double)img[j];
+        }
+    }
+    //translate_data_rows(d, -128);
+    scale_data_rows(d, 1./255);
+    //normalize_data_rows(d);
+    fclose(fp);
+    return d;
+}
+
 void get_random_batch(data d, int n, float *X, float *y)
 {
     int j;
