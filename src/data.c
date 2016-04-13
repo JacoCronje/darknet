@@ -953,6 +953,73 @@ data load_stl10_data(char *filenameImages, char *filenameLabels, int N)
     return d;
 }
 
+data load_stl10_data_fold(char *filenameImages, char *filenameLabels, char *filenameFold, int foldIndex)
+{
+    int N = 1000;
+    data d;
+    d.shallow = 0;
+    long i,j;
+    matrix X = make_matrix(N, 96*96*3);
+    matrix y = make_matrix(N, 10);
+    d.X = X;
+    d.y = y;
+    int c,xx,yy;
+    int v;
+
+    int idx[5000];
+    memset(idx, 0, sizeof(idx));
+    FILE *fpf = fopen(filenameFold, "r");
+    if(!fpf) file_error(filenameFold);
+    for (i=0;i<foldIndex;i++)
+    {
+        for (j=0;j<N;j++)
+            fscanf(fpf, "%d", &v);
+    }
+    for (j=0;j<N;j++)
+    {
+        fscanf(fpf, "%d", &v);
+        idx[v] = 1;
+    }
+    fclose(fpf);
+
+    FILE *fp = fopen(filenameImages, "rb");
+    if(!fp) file_error(filenameImages);
+    FILE *fpLbl = fopen(filenameLabels, "rb");
+    if(!fpLbl) file_error(filenameLabels);
+    unsigned char lbl[500*10];
+    fread(lbl, 1, 500*10, fpLbl);
+    fclose(fpLbl);
+
+    int ii = 0;
+    for(i = 0; i < 500*10; ++i)
+    {
+        unsigned char bytes[96*96*3];
+        fread(bytes, 1, 96*96*3, fp);
+        if (idx[i]==0) continue;
+        // transpose
+        unsigned char img[96*96*3];
+        for (c=0;c<3;c++)
+        {
+            for (yy=0;yy<96;yy++)
+                for (xx=0;xx<96;xx++)
+                {
+                    img[c*96*96+xx+yy*96] = bytes[c*96*96+yy+xx*96];
+                }
+        }
+        int class = lbl[i] - 1;
+        y.vals[ii][class] = 1;
+        for(j = 0; j < X.cols; ++j){
+            X.vals[ii][j] = (double)img[j];
+        }
+        ii++;
+    }
+    //translate_data_rows(d, -128);
+    scale_data_rows(d, 1./255);
+    //normalize_data_rows(d);
+    fclose(fp);
+    return d;
+}
+
 void get_random_batch(data d, int n, float *X, float *y)
 {
     int j;

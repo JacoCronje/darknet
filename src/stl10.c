@@ -11,12 +11,18 @@
 int stl10_set = 10;
 
 
-void train_stl10(char *cfgfile, char *weightfile)
+void train_stl10(char *cfgfile, char *weightfile, int fold)
 {
     data_seed = time(0);
     srand(time(0));
     float avg_loss = -1;
-    char *base = basecfg(cfgfile);
+    char *baseO = basecfg(cfgfile);
+    char base[512];
+    if (fold<0)
+        sprintf(base, "%s", baseO);
+    else
+        sprintf(base, "%s%d", baseO, fold);
+
     char *backup_directory = "backup";
     printf("%s\n", base);
     network net = parse_network_cfg(cfgfile);
@@ -36,7 +42,14 @@ void train_stl10(char *cfgfile, char *weightfile)
 
     data train;
     data test;
-    train = load_stl10_data("data/stl10/train_X.bin", "data/stl10/train_y.bin", 500*10);
+    if (fold<0)
+    {
+        train = load_stl10_data("data/stl10/train_X.bin", "data/stl10/train_y.bin", 500*10);
+    } else
+    {
+        train = load_stl10_data_fold("data/stl10/train_X.bin", "data/stl10/train_y.bin", "data/stl10/fold_indices.txt", fold);
+        N = 1000;
+    }
     test = load_stl10_data("data/stl10/test_X.bin", "data/stl10/test_y.bin", 800*10);
 
     clock_t time=clock();
@@ -180,22 +193,22 @@ void test_stl10_multi(char *filename, char *weightfile)
 
     int i;
     for(i = 0; i < test.X.rows; ++i){
-        image im = float_to_image(32, 32, 3, test.X.vals[i]);
+        image im = float_to_image(96, 96, 3, test.X.vals[i]);
 
         float pred[100] = {0};
 
         float *p = network_predict(net, im.data);
-        axpy_cpu(stl10_set, 1, p, 1, pred, 1);
+        axpy_cpu(10, 1, p, 1, pred, 1);
         flip_image(im);
         p = network_predict(net, im.data);
-        axpy_cpu(stl10_set, 1, p, 1, pred, 1);
+        axpy_cpu(10, 1, p, 1, pred, 1);
 
-        int index = max_index(pred, stl10_set);
-        int class = max_index(test.y.vals[i], stl10_set);
+        int index = max_index(pred, 10);
+        int class = max_index(test.y.vals[i], 10);
         if(index == class) avg_acc += 1;
         free_image(im);
-        printf("%4d: %.2f%%\n", i, 100.*avg_acc/(i+1));
     }
+    printf("%4d: %.2f%%\n", i, 100.*avg_acc/(i+1));
 }
 
 void test_stl10(char *filename, char *weightfile)
@@ -304,13 +317,23 @@ void run_stl10(int argc, char **argv)
 
     char *cfg = argv[3];
     char *weights = (argc > 4) ? argv[4] : 0;
-    if(0==strcmp(argv[2], "train")) train_stl10(cfg, weights);
+    if(0==strcmp(argv[2], "train")) train_stl10(cfg, weights, -1);
     else if(0==strcmp(argv[2], "distill")) train_stl10_distill(cfg, weights);
     else if(0==strcmp(argv[2], "test")) test_stl10(cfg, weights);
     else if(0==strcmp(argv[2], "multi")) test_stl10_multi(cfg, weights);
     else if(0==strcmp(argv[2], "csv")) test_stl10_csv(cfg, weights);
     else if(0==strcmp(argv[2], "csvtrain")) test_stl10_csvtrain(cfg, weights);
     else if(0==strcmp(argv[2], "eval")) eval_stl10_csv();
+    else if(0==strcmp(argv[2], "train0")) train_stl10(cfg, weights, 0);
+    else if(0==strcmp(argv[2], "train1")) train_stl10(cfg, weights, 1);
+    else if(0==strcmp(argv[2], "train2")) train_stl10(cfg, weights, 2);
+    else if(0==strcmp(argv[2], "train3")) train_stl10(cfg, weights, 3);
+    else if(0==strcmp(argv[2], "train4")) train_stl10(cfg, weights, 4);
+    else if(0==strcmp(argv[2], "train5")) train_stl10(cfg, weights, 5);
+    else if(0==strcmp(argv[2], "train6")) train_stl10(cfg, weights, 6);
+    else if(0==strcmp(argv[2], "train7")) train_stl10(cfg, weights, 7);
+    else if(0==strcmp(argv[2], "train8")) train_stl10(cfg, weights, 8);
+    else if(0==strcmp(argv[2], "train9")) train_stl10(cfg, weights, 9);
 }
 
 
