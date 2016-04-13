@@ -7,7 +7,7 @@ extern "C" {
 #include "cuda.h"
 }
 
-__global__ void forward_shrinkmax_layer_kernel(int n, int out_w, int out_h, int out_c,
+__global__ void forward_shrinkmax_layer_kernel(int n, int w, int h, int out_w, int out_h, int out_c,
                                                int gap, int splits, int inputs,
                                                float *input, float *output, int *indexes)
 {
@@ -23,8 +23,8 @@ __global__ void forward_shrinkmax_layer_kernel(int n, int out_w, int out_h, int 
     id /= out_c;
     int b = id;
 
-    int ridx = x + y*out_w + c*out_w*out_h*splits + c*(splits-1)*out_w*gap + b*inputs;
-    int step = out_w*out_h+out_w*gap;
+    int ridx = x + y*w + c*w*h /*+ c*(splits-1)*out_w*gap*/ + b*inputs;
+    int step = w*out_h+w*gap;
     int i;
     float max = -INFINITY;
     int max_i = -1;
@@ -69,7 +69,7 @@ extern "C" void forward_shrinkmax_layer_gpu(layer l, network_state state)
 
     size_t n = h*w*c*l.batch;
 
-    forward_shrinkmax_layer_kernel<<<cuda_gridsize(n), BLOCK>>>(n, l.out_w, l.out_h, l.out_c, l.gap, l.index, l.inputs, state.input, l.output_gpu, l.indexes_gpu);
+    forward_shrinkmax_layer_kernel<<<cuda_gridsize(n), BLOCK>>>(n, l.w, l.h, l.out_w, l.out_h, l.out_c, l.gap, l.index, l.inputs, state.input, l.output_gpu, l.indexes_gpu);
     check_error(cudaPeekAtLastError());
 }
 
