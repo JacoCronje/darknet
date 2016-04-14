@@ -78,8 +78,9 @@ struct layer{
     int noadjust;
     int gap;
 
-    int n_angles;
-    int *angles;
+    int n_aug;
+    int *flips;
+    float *angles;
 
     float alpha;
     float beta;

@@ -205,3 +205,60 @@ extern "C" void augment_flip_delta_gpu(int w, int h, int c, int batch, int gap,
     check_error(cudaPeekAtLastError());
 }
 
+
+
+__global__ void augment_forward_kernel(int size, int w, int h, float *src, float *out, float angle, int flip, float scale)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % w;
+    id /= w;
+    int y = id % h;
+
+    int cx = w/2;
+    int cy = h/2;
+
+    float rx = scale*(cos(angle)*(x-cx) - sin(angle)*(y-cy)) + cx;
+    float ry = scale*(sin(angle)*(x-cx) + cos(angle)*(y-cy)) + cy;
+    int out_index = (flip ? (w-x-1) : x) + y*w;
+    out[out_index] = bilinear_interpolate_kernel(src, w, h, rx, ry);
+}
+
+
+extern "C" void augment_forward_gpu(int w, int h, float *src, float *dest, float angle, int flip, float scale)
+{
+    float radians = (float)(angle)*3.14159265/180.;
+    int size = w*h;
+    augment_forward_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, src, dest, radians, flip, scale);
+    check_error(cudaPeekAtLastError());
+}
+
+__global__ void augment_backward_kernel(int size, int w, int h, float *src, float *out, float angle, int flip, float scale, float ALPHA)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % w;
+    id /= w;
+    int y = id % h;
+
+    int cx = w/2;
+    int cy = h/2;
+
+    float rx = scale*(cos(angle)*(x-cx) - sin(angle)*(y-cy)) + cx;
+    float ry = scale*(sin(angle)*(x-cx) + cos(angle)*(y-cy)) + cy;
+    int out_index = (flip ? (w-x-1) : x) + y*w;
+    out[out_index] += ALPHA * bilinear_interpolate_kernel(src, w, h, rx, ry);
+}
+
+
+extern "C" void augment_backward_gpu(int w, int h, float ALPHA, float *src, float *dest, float angle, int flip, float scale)
+{
+    float radians = -(float)(angle)*3.14159265/180.;
+    scale = 1.f / scale;
+    int size = w*h;
+    augment_backward_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, src, dest, radians, flip, scale, ALPHA);
+    check_error(cudaPeekAtLastError());
+}
+
+
+
