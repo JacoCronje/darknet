@@ -116,7 +116,7 @@ void train_stl10(char *cfgfile, char *weightfile, int fold)
     save_weights(net, buff);
 
     free_network(net);
-    free(base);
+    free(baseO);
     free_data(train);
 }
 
