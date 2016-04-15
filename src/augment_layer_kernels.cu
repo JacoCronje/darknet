@@ -220,8 +220,17 @@ __global__ void augment_forward_kernel(int size, int w, int h, float *src, float
 
     float rx = scale*(cos(angle)*(x-cx) - sin(angle)*(y-cy)) + cx;
     float ry = scale*(sin(angle)*(x-cx) + cos(angle)*(y-cy)) + cy;
-    int out_index = (flip ? (w-x-1) : x) + y*w;
-    out[out_index] = bilinear_interpolate_kernel(src, w, h, rx, ry);
+    rx = (flip ? (w-rx-1) : rx);
+    int out_index = x+y*w;//(flip ? (w-x-1) : x) + y*w;
+
+    int ix = (int)floorf(rx);
+    int iy = (int)floorf(ry);
+    float val = 0;
+    if (!(ix < 0 || ix >= w || iy < 0 || iy >= h))
+    {
+        val = src[ix+iy*w];
+    }
+    out[out_index] = val;//bilinear_interpolate_kernel(src, w, h, rx, ry);
 }
 
 
@@ -246,17 +255,121 @@ __global__ void augment_backward_kernel(int size, int w, int h, float *src, floa
 
     float rx = scale*(cos(angle)*(x-cx) - sin(angle)*(y-cy)) + cx;
     float ry = scale*(sin(angle)*(x-cx) + cos(angle)*(y-cy)) + cy;
-    int out_index = (flip ? (w-x-1) : x) + y*w;
-    out[out_index] += ALPHA * bilinear_interpolate_kernel(src, w, h, rx, ry);
+    rx = (flip ? (w-rx-1) : rx);
+
+    int ix = (int)floorf(rx);
+    int iy = (int)floorf(ry);
+    if ((ix < 0 || ix >= w || iy < 0 || iy >= h)) return;
+
+    int out_index = ix+iy*w;
+    out[out_index] += ALPHA * src[x+y*w];
 }
 
 
 extern "C" void augment_backward_gpu(int w, int h, float ALPHA, float *src, float *dest, float angle, int flip, float scale)
 {
-    float radians = -(float)(angle)*3.14159265/180.;
-    scale = 1.f / scale;
+    float radians = (float)(angle)*3.14159265/180.;
     int size = w*h;
     augment_backward_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, src, dest, radians, flip, scale, ALPHA);
+    check_error(cudaPeekAtLastError());
+}
+
+
+__constant__ float c_radians[32];
+__constant__ float c_scales[32];
+__constant__ int c_flips[32];
+
+
+__global__ void augment_backward_max_kernel(int size, int w, int h, int out_c, int out_w, int out_h, int gap,
+                                            float *src, float *dest, int* indexes)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+
+    int x = id % out_w;
+    id /= out_w;
+    int y = id % out_h;
+    id /= out_h;
+    int c = id % out_c;
+
+    int widx = x + y*out_w + c*out_w*out_h;
+    int max_i = indexes[widx];
+    float dt = src[widx];
+    dest[max_i] += dt;
+}
+
+__global__ void augment_forward_max_kernel(int size, int w, int h, int c, int out_w, int out_h, int gap,
+                                           float *src, float *dest, int* indexes, int n_aug)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % out_w;
+    id /= out_w;
+    int y = id % out_h;
+    id /= out_h;
+    int ch = id % c;
+
+    int cx = out_w/2;
+    int cy = out_h/2;
+
+    int widx = x + y*out_w + ch*out_w*out_h;
+    int ridx = x + y*w + ch*w*h;
+    int rbase = ch*w*h;
+    float max = src[ridx];
+    int max_i = ridx;
+    int i;
+    for (i=0;i<n_aug;i++)
+    {
+        rbase += gap*out_w + out_w*out_h;
+        float rx = c_scales[i]*(cos(c_radians[i])*(x-cx) - sin(c_radians[i])*(y-cy)) + cx;
+        float ry = c_scales[i]*(sin(c_radians[i])*(x-cx) + cos(c_radians[i])*(y-cy)) + cy;
+        rx = (c_flips[i] ? (w-rx-1) : rx);
+
+        int ix = (int)floorf(rx);
+        int iy = (int)floorf(ry);
+        if (ix < 0 || ix >= out_w || iy < 0 || iy >= out_h) continue;
+        ridx = rbase+ix+iy*out_w;
+        //float val = bilinear_interpolate_kernel(src+rbase, out_w, out_h, rx, ry);
+
+        float val = src[ridx];
+        max_i = (val > max) ? ridx : max_i;
+        max   = (val > max) ? val  : max;
+    }
+
+    dest[widx] = max;
+    indexes[widx] = max_i;
+}
+
+
+extern "C" void augment_forward_max_gpu(int w, int h, int c, int out_w, int out_h, int gap,
+                                        float *src, float *dest, int* indexes,
+                                        int n_aug,
+                                        float* angles, int* flips, float* scales)
+{
+    float radians[32];
+    float scales_[32];
+    int i;
+    for (i=0;i<n_aug;i++)
+    {
+        radians[i] = (float)(angles[i])*3.14159265/180.;
+        if (flips[i]==0)
+            radians[i] = -radians[i];
+        scales_[i] = 1.f / scales[i];
+    }
+
+    cudaMemcpyToSymbol(c_radians, radians, n_aug*sizeof(float));
+    cudaMemcpyToSymbol(c_scales, scales_, n_aug*sizeof(float));
+    cudaMemcpyToSymbol(c_flips, flips, n_aug*sizeof(int));
+
+    int size = out_w*out_h*c;
+    augment_forward_max_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, c, out_w, out_h, gap, src, dest, indexes, n_aug);
+    check_error(cudaPeekAtLastError());
+}
+extern "C" void augment_backward_max_gpu(int w, int h, int c, int out_w, int out_h, int gap,
+                                        float *src, float *dest, int* indexes)
+{
+    int size = out_w*out_h*c;
+    augment_backward_max_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, c, out_w, out_h, gap, src, dest, indexes);
     check_error(cudaPeekAtLastError());
 }
 

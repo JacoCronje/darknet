@@ -22,6 +22,13 @@ void augmentrotate_delta_gpu(int w, int h, float ALPHA, float *src, float *dest,
 
 void augment_forward_gpu(int w, int h, float *src, float *dest, float angle, int flip, float scale);
 void augment_backward_gpu(int w, int h, float ALPHA, float *src, float *dest, float angle, int flip, float scale);
+
+void augment_forward_max_gpu(int w, int h, int c, int out_w, int out_h, int gap,
+                                        float *src, float *dest, int* indexes,
+                                        int n_aug,
+                                        float* angles, int* flips, float* scales);
+void augment_backward_max_gpu(int w, int h, int c, int out_w, int out_h, int gap,
+                                        float *src, float *dest, int* indexes);
 #endif
 
 
