@@ -26,6 +26,7 @@ extern void run_tag(int argc, char **argv);
 extern void run_cifar(int argc, char **argv);
 extern void run_go(int argc, char **argv);
 extern void run_stl10(int argc, char **argv);
+extern void run_mnist(int argc, char **argv);
 
 void change_rate(char *filename, float scale, float add)
 {
@@ -230,6 +231,8 @@ int main(int argc, char **argv)
         run_yolo(argc, argv);
     } else if (0 == strcmp(argv[1], "cifar")){
         run_cifar(argc, argv);
+    } else if (0 == strcmp(argv[1], "mnist")){
+        run_mnist(argc, argv);
     } else if (0 == strcmp(argv[1], "stl10")){
         run_stl10(argc, argv);
     } else if (0 == strcmp(argv[1], "go")){
