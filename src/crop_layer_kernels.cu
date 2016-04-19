@@ -95,7 +95,7 @@ __device__ float bilinear_interpolate_kernel(float *image, int w, int h, float x
     return val;
 }
 
-__global__ void levels_image_kernel(float *image, float *rand, int batch, int w, int h, int train, float saturation, float exposure, float translate, float scale, float shift)
+__global__ void levels_image_kernel(float *image, float *rand, int batch, int c, int w, int h, int train, float saturation, float exposure, float translate, float scale, float shift)
 {
     int size = batch * w * h;
     int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
@@ -117,7 +117,7 @@ __global__ void levels_image_kernel(float *image, float *rand, int batch, int w,
     exposure = r2*(exposure - 1) + 1;
     exposure = (r3 > .5) ? 1./exposure : exposure;
 
-    size_t offset = id * h * w * 3;
+    size_t offset = id * h * w * c;
     image += offset;
     float r = image[x + w*(y + h*0)];
     float g = image[x + w*(y + h*1)];
@@ -195,7 +195,7 @@ extern "C" void forward_crop_layer_gpu(crop_layer layer, network_state state)
 
     int size = layer.batch * layer.w * layer.h;
 
-    levels_image_kernel<<<cuda_gridsize(size), BLOCK>>>(state.input, layer.rand_gpu, layer.batch, layer.w, layer.h, state.train, layer.saturation, layer.exposure, translate, scale, layer.shift);
+    levels_image_kernel<<<cuda_gridsize(size), BLOCK>>>(state.input, layer.rand_gpu, layer.batch, layer.c, layer.w, layer.h, state.train, layer.saturation, layer.exposure, translate, scale, layer.shift);
     check_error(cudaPeekAtLastError());
 
     size = layer.batch*layer.c*layer.out_w*layer.out_h;
