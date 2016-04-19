@@ -119,21 +119,44 @@ __global__ void levels_image_kernel(float *image, float *rand, int batch, int c,
 
     size_t offset = id * h * w * c;
     image += offset;
-    float r = image[x + w*(y + h*0)];
-    float g = image[x + w*(y + h*1)];
-    float b = image[x + w*(y + h*2)];
-    float3 rgb = make_float3(r,g,b);
-    if(train){
-        float3 hsv = rgb_to_hsv_kernel(rgb);
-        hsv.y *= saturation;
-        hsv.z *= exposure;
-        rgb = hsv_to_rgb_kernel(hsv);
-    } else {
-        shift = 0;
+
+    if (c==3)
+    {
+        float r = image[x + w*(y + h*0)];
+        float g = image[x + w*(y + h*1)];
+        float b = image[x + w*(y + h*2)];
+        float3 rgb = make_float3(r,g,b);
+        if(train){
+            float3 hsv = rgb_to_hsv_kernel(rgb);
+            hsv.y *= saturation;
+            hsv.z *= exposure;
+            rgb = hsv_to_rgb_kernel(hsv);
+        } else {
+            shift = 0;
+        }
+        image[x + w*(y + h*0)] = rgb.x*scale + translate + (rshift - .5)*shift;
+        image[x + w*(y + h*1)] = rgb.y*scale + translate + (gshift - .5)*shift;
+        image[x + w*(y + h*2)] = rgb.z*scale + translate + (bshift - .5)*shift;
+    } else
+    {
+        for (int cc=0;cc<c;cc++)
+        {
+            float r = image[x + w*(y + h*cc)];
+            float g = r;
+            float b = r;
+            float3 rgb = make_float3(r,g,b);
+            if(train){
+                float3 hsv = rgb_to_hsv_kernel(rgb);
+                hsv.y *= saturation;
+                hsv.z *= exposure;
+                rgb = hsv_to_rgb_kernel(hsv);
+            } else {
+                shift = 0;
+            }
+            image[x + w*(y + h*cc)] = rgb.x*scale + translate + (rshift - .5)*shift;
+        }
     }
-    image[x + w*(y + h*0)] = rgb.x*scale + translate + (rshift - .5)*shift;
-    image[x + w*(y + h*1)] = rgb.y*scale + translate + (gshift - .5)*shift;
-    image[x + w*(y + h*2)] = rgb.z*scale + translate + (bshift - .5)*shift;
+
 }
 
 __global__ void forward_crop_layer_kernel(float *input, float *rand, int size, int c, int h, int w, int crop_height, int crop_width, int train, int flip, float angle, float *output)
