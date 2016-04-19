@@ -79,6 +79,8 @@ data load_all_cifar10();
 data load_cifar100_data(char *filename);
 data load_all_cifar100();
 
+data load_mnist_data(char *filenameImages, char *filenameLabels, int N);
+
 data load_stl10_data(char *filenameImages, char *filenameLabels, int N);
 data load_stl10_data_fold(char *filenameImages, char *filenameLabels, char *filenameFold, int foldIndex);
 

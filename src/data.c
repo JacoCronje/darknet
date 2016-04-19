@@ -908,6 +908,46 @@ data load_cifar10_data(char *filename)
     return d;
 }
 
+
+data load_mnist_data(char *filenameImages, char *filenameLabels, int N)
+{
+    data d;
+    d.shallow = 0;
+    long i,j;
+    matrix X = make_matrix(N, 28*28);
+    matrix y = make_matrix(N, 10);
+    d.X = X;
+    d.y = y;
+
+    FILE *fp = fopen(filenameImages, "rb");
+    if(!fp) file_error(filenameImages);
+    FILE *fpLbl = fopen(filenameLabels, "rb");
+    if(!fpLbl) file_error(filenameLabels);
+    unsigned char lbl[16];
+    fread(lbl, 1, 8, fpLbl);
+
+    for(i = 0; i < N; ++i){
+        unsigned char bytes[28*28];
+        if (i==0)
+        {
+            fread(bytes, 1, 16, fp);
+        }
+        fread(bytes, 1, 28*28, fp);
+        fread(lbl, 1, 1, fpLbl);
+        int class = lbl[0];
+        y.vals[i][class] = 1;
+        for(j = 0; j < X.cols; ++j){
+            X.vals[i][j] = (double)bytes[j];
+        }
+    }
+    //translate_data_rows(d, -128);
+    scale_data_rows(d, 1./255);
+    //normalize_data_rows(d);
+    fclose(fp);
+    fclose(fpLbl);
+    return d;
+}
+
 data load_stl10_data(char *filenameImages, char *filenameLabels, int N)
 {
     data d;
