@@ -153,8 +153,9 @@ int main( int argc, char** argv )
         stringstream ss;
         ss << argv[1] << images[idx].imgname;
         img = cvLoadImage(ss.str().c_str());
-        imgM = cvLoadImage(ss.str().c_str());
+       // imgM = cvLoadImage(ss.str().c_str());
     }
+    imgM = cvCreateImage(cvSize(512,512), IPL_DEPTH_8U, 3);
 
 
     vector<CvScalar> col;
@@ -191,6 +192,18 @@ int main( int argc, char** argv )
             img = cvLoadImage(ss.str().c_str());
             saveAnnotations(argv[3]);
         }
+        if (c=='r')
+        {
+            for (int i=0;i<images.size();i++)
+            {
+                int i1 = rand()%images.size();
+                swap(images[i], images[i1]);
+            }
+            cvReleaseImage(&img);
+            stringstream ss;
+            ss << argv[1] << images[idx].imgname;
+            img = cvLoadImage(ss.str().c_str());
+        }
         if (c>='1' && c<='9')
         {
             int mx = mousepos&4095;
@@ -198,8 +211,8 @@ int main( int argc, char** argv )
             int cidx = c-'1';
             double prevx = images[idx].x[cidx];
             double prevy = images[idx].y[cidx];
-            images[idx].x[cidx] = (double)(mx) / img->width;
-            images[idx].y[cidx] = (double)(my) / img->height;
+            images[idx].x[cidx] = (double)(mx) / imgM->width;
+            images[idx].y[cidx] = (double)(my) / imgM->height;
             if (fabs(images[idx].x[cidx]-prevx)<0.00001 && fabs(images[idx].y[cidx]-prevy)<0.00001)
             {
                 images[idx].x[cidx] = -1;
@@ -207,7 +220,8 @@ int main( int argc, char** argv )
             }
         }
 
-        cvCopy(img, imgM, NULL);
+        //cvCopy(img, imgM, NULL);
+        cvResize(img, imgM);
         for (int i=0;i<NP;i++)
         {
             if (images[idx].x[i]<0) continue;
@@ -218,6 +232,7 @@ int main( int argc, char** argv )
 
 
         cvShowImage( "Annotate", imgM );
+        //cvResizeWindow( "Annotate", 512, 512);
         setMouseCallback("Annotate", onmouse, &mousepos);
     }
 
