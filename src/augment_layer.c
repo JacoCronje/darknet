@@ -38,16 +38,22 @@ layer make_augment_layer(int batch, int merge, int gap, int n_aug, float* angles
     l.flips = flips;
     l.scales = scales;
     l.out_w = w;
-    if (merge==1)
+    if (merge==2)
     {
         l.out_h = (h-l.gap*n_aug)/(1+n_aug);
-        fprintf(stderr, "[mergemax]");
+        l.out_c = c*(1+n_aug);
+        fprintf(stderr, "[merge_split]");
+    } else if (merge==1)
+    {
+        l.out_h = (h-l.gap*n_aug)/(1+n_aug);
+        l.out_c = c;
+        fprintf(stderr, "[merge_max]");
     }
     else if (merge==0)
     {
         l.out_h = h*(1+n_aug) + l.gap*n_aug;
+        l.out_c = c;
     }
-    l.out_c = c;
     fprintf(stderr, "\n               ");
 
     fprintf(stderr, ": %d x %d x %d image, -> %d x %d x %d image\n", l.h,l.w,l.c, l.out_h, l.out_w, l.out_c);
@@ -61,7 +67,7 @@ layer make_augment_layer(int batch, int merge, int gap, int n_aug, float* angles
     l.delta_gpu =  cuda_make_array(l.delta, l.outputs*batch);
     l.output_gpu = cuda_make_array(l.output, l.outputs*batch);
     #endif
-    if (merge==1)
+    if (merge==1 || merge==2)
     {
         l.indexes = calloc(l.outputs*batch, sizeof(int));
         #ifdef GPU
@@ -99,11 +105,13 @@ void forward_augment_layer_gpu(const layer l, network_state state)
                                     l.output_gpu+b*l.outputs+c*l.out_h*l.out_w, 1);
             }
             for (a=0;a<l.n_aug;a++)
-            for (c=0;c<l.c;c++)
             {
-                augment_forward_gpu(l.w, l.h, state.input+b*l.inputs+l.w*l.h*c,
-                                    l.output_gpu+b*l.outputs+c*l.out_h*l.out_w+l.w*(l.gap+l.h)*(1+a),
-                                    l.angles[a], l.flips[a], l.scales[a]);
+                for (c=0;c<l.c;c++)
+                {
+                    augment_forward_gpu(l.w, l.h, state.input+b*l.inputs+l.w*l.h*c,
+                                        l.output_gpu+b*l.outputs+c*l.out_h*l.out_w+l.w*(l.gap+l.h)*(1+a),
+                                        l.angles[a], l.flips[a], l.scales[a]);
+                }
             }
         }
     } else if (l.index==1)
@@ -112,6 +120,18 @@ void forward_augment_layer_gpu(const layer l, network_state state)
         for (b=0;b<l.batch;b++)
         {
             augment_forward_max_gpu(l.w, l.h, l.c, l.out_w, l.out_h, l.gap,
+                                    state.input+b*l.inputs,
+                                    l.output_gpu+b*l.outputs,
+                                    l.indexes_gpu,
+                                    l.n_aug,
+                                    l.angles, l.flips, l.scales);
+        }
+    } else if (l.index==2)
+    {
+        // merging with split, channels increased
+        for (b=0;b<l.batch;b++)
+        {
+            augment_forward_split_gpu(l.w, l.h, l.c, l.out_w, l.out_h, l.gap,
                                     state.input+b*l.inputs,
                                     l.output_gpu+b*l.outputs,
                                     l.indexes_gpu,
@@ -151,6 +171,16 @@ void backward_augment_layer_gpu(const layer l, network_state state)
         for (b=0;b<l.batch;b++)
         {
             augment_backward_max_gpu(l.w, l.h, l.c, l.out_w, l.out_h, l.gap,
+                                    l.delta_gpu+b*l.outputs,
+                                    state.delta+b*l.inputs,
+                                    l.indexes_gpu);
+        }
+    } else if (l.index==2)
+    {
+        // merging with split
+        for (b=0;b<l.batch;b++)
+        {
+            augment_backward_split_gpu(l.out_w, l.out_h, l.out_c,
                                     l.delta_gpu+b*l.outputs,
                                     state.delta+b*l.inputs,
                                     l.indexes_gpu);

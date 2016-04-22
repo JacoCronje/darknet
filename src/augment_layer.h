@@ -29,6 +29,14 @@ void augment_forward_max_gpu(int w, int h, int c, int out_w, int out_h, int gap,
                                         float* angles, int* flips, float* scales);
 void augment_backward_max_gpu(int w, int h, int c, int out_w, int out_h, int gap,
                                         float *src, float *dest, int* indexes);
+
+void augment_forward_split_gpu(int w, int h, int c, int out_w, int out_h, int gap,
+                                        float *src, float *dest, int* indexes,
+                                        int n_aug,
+                                        float* angles, int* flips, float* scales);
+void augment_backward_split_gpu(int out_w, int out_h, int out_c,
+                                float *src, float *dest, int* indexes);
+
 #endif
 
 
