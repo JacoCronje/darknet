@@ -86,13 +86,13 @@ void train_driver(char *cfgfile, char *weightfile)
     fclose(fp);
 
     train.shallow = 0;
-    matrix X = make_matrix(N, 64*64*3);
+    matrix X = make_matrix(N, net.w*net.h*3);
     matrix y = make_matrix(N, 10);
     train.X = X;
     train.y = y;
 
     fprintf(stderr, "Loading training images\n");
-    list *plist = get_paths("data/driver_imgs.txt");
+    list *plist = get_paths("data/driver_imgs128.txt");
     char **paths = (char **)list_to_array(plist);
     for (i=0;i<plist->size;i++)
     {
@@ -100,7 +100,7 @@ void train_driver(char *cfgfile, char *weightfile)
         if ((i%1000)==0)
             fprintf(stderr, "progress = %d of %d\n", i, plist->size);
         char *path = paths[i];
-        image img = load_image_color(path, 64, 64);
+        image img = load_image_color(path, net.w, net.h);
         char fname[512];
         int n = strlen(path);
         for (j=n-1;j>=0;j--)
@@ -201,11 +201,12 @@ void test_driver(char *filename, char *weightfile, char *listfile, int w, int h)
     freopen("driver_predict.txt", "w", stdout);
     fprintf(stdout, "img,c0,c1,c2,c3,c4,c5,c6,c7,c8,c9\n");
 
-    float *dat = malloc(64*64*3*16*sizeof(float));
+    float *dat = malloc(net.w*net.h*3*16*sizeof(float));
     //matrix X = make_matrix(16, 64*64*3);
 
     char* fname[16];
     // TODO: change for larger batches
+    // TODO: augmentations
     int i,j,k;
     for (i=0;i<16;i++) fname[i] = malloc(512);
     int nidx = 0;
@@ -229,8 +230,8 @@ void test_driver(char *filename, char *weightfile, char *listfile, int w, int h)
             }
       //  fprintf(stderr, "Loading image %s %d %d\n", path,w, h);
         image img = load_image_color(path, w, h);
-        for(j = 0; j < 64*64*3; ++j){
-            dat[j+nidx*64*64*3] = ((double)img.data[j]) / 255;
+        for(j = 0; j < net.w*net.h*3; ++j){
+            dat[j+nidx*net.w*net.h*3] = ((double)img.data[j]) / 255;
         }
        // printf("predicting\n");
         nidx++;
@@ -270,18 +271,18 @@ void test_driver(char *filename, char *weightfile, char *listfile, int w, int h)
         int kidx = 0;
         for (k=0;k<nidx;k++)
         {
-            int mxj = 0;
-            for (j=1;j<10;j++)
-            {
-                if (p[j+kidx]>p[mxj+kidx]) mxj = j;
-            }
-            for (j=0;j<10;j++)
-            {
-                if (j==mxj)
-                    p[j+kidx] = 1.0;
-                else
-                    p[j+kidx] = 0.0;
-            }
+//            int mxj = 0;
+//            for (j=1;j<10;j++)
+//            {
+//                if (p[j+kidx]>p[mxj+kidx]) mxj = j;
+//            }
+//            for (j=0;j<10;j++)
+//            {
+//                if (j==mxj)
+//                    p[j+kidx] = 1.0;
+//                else
+//                    p[j+kidx] = 0.0;
+//            }
             //printf("done\n");
             fprintf(stdout, "%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", fname[k],
                     p[0+kidx],p[1+kidx],p[2+kidx],p[3+kidx],p[4+kidx],p[5+kidx],p[6+kidx],p[7+kidx],p[8+kidx],p[9+kidx] );
