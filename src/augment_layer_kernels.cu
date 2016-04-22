@@ -375,3 +375,97 @@ extern "C" void augment_backward_max_gpu(int w, int h, int c, int out_w, int out
 
 
 
+__global__ void augment_backward_split_kernel(int size, int out_w, int out_h, int out_c,
+                                            float *src, float *dest, int* indexes)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+
+    int x = id % out_w;
+    id /= out_w;
+    int y = id % out_h;
+    id /= out_h;
+    int c = id % out_c;
+
+    int widx = x + y*out_w + c*out_w*out_h;
+    int ridx = indexes[widx];
+    float dt = src[widx];
+    dest[ridx] += dt;
+}
+
+__global__ void augment_forward_split_kernel(int size, int w, int h, int c, int out_w, int out_h, int gap,
+                                           float *src, float *dest, int* indexes, int n_aug)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= size) return;
+    int x = id % out_w;
+    id /= out_w;
+    int y = id % out_h;
+    id /= out_h;
+    int ch = id % (c*(1+n_aug)); // channel in output
+    int chf = ch % c; // channel in input
+    int augi = ch /c; // augmentation index
+
+    int cx = out_w/2;
+    int cy = out_h/2;
+
+    int widx = x + y*out_w + ch*out_w*out_h;
+    int rbase = chf*w*h;
+    int ridx;
+
+    if (augi==0)
+    {
+        // augmentation, just copy
+        ridx = x + y*w + chf*w*h;
+    } else
+    {
+        rbase += (gap*out_w + out_w*out_h) * augi;
+        int i = augi-1;
+        float rx = c_scales[i]*(cos(c_radians[i])*(x-cx) - sin(c_radians[i])*(y-cy)) + cx;
+        float ry = c_scales[i]*(sin(c_radians[i])*(x-cx) + cos(c_radians[i])*(y-cy)) + cy;
+        rx = (c_flips[i] ? (w-rx-1) : rx);
+
+        int ix = (int)floorf(rx);
+        int iy = (int)floorf(ry);
+        if (ix < 0 || ix >= out_w || iy < 0 || iy >= out_h) return;
+        ridx = rbase+ix+iy*out_w;
+    }
+    float v = src[ridx];
+    dest[widx] = v;
+    indexes[widx] = ridx;
+}
+
+
+extern "C" void augment_forward_split_gpu(int w, int h, int c, int out_w, int out_h, int gap,
+                                        float *src, float *dest, int* indexes,
+                                        int n_aug,
+                                        float* angles, int* flips, float* scales)
+{
+    float radians[32];
+    float scales_[32];
+    int i;
+    for (i=0;i<n_aug;i++)
+    {
+        radians[i] = (float)(angles[i])*3.14159265/180.;
+        if (flips[i]==0)
+            radians[i] = -radians[i];
+        scales_[i] = 1.f / scales[i];
+    }
+    int out_c = c*(1+n_aug);
+
+    cudaMemcpyToSymbol(c_radians, radians, n_aug*sizeof(float));
+    cudaMemcpyToSymbol(c_scales, scales_, n_aug*sizeof(float));
+    cudaMemcpyToSymbol(c_flips, flips, n_aug*sizeof(int));
+
+    int size = out_w*out_h*out_c;
+    augment_forward_split_kernel<<<cuda_gridsize(size), BLOCK>>>(size, w, h, c, out_w, out_h, gap, src, dest, indexes, n_aug);
+    check_error(cudaPeekAtLastError());
+}
+extern "C" void augment_backward_split_gpu(int out_w, int out_h, int out_c,
+                                        float *src, float *dest, int* indexes)
+{
+    int size = out_w*out_h*out_c;
+    augment_backward_split_kernel<<<cuda_gridsize(size), BLOCK>>>(size, out_w, out_h, out_c, src, dest, indexes);
+    check_error(cudaPeekAtLastError());
+}
+
