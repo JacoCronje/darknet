@@ -1,0 +1,12 @@
+PROJECT(ensemble)
+
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O2 -s -pipe -msse3 -std=c++0x")
+
+SET(SOURCES
+  main.cpp
+)
+
+ADD_EXECUTABLE(ensemble ${SOURCES})
+TARGET_LINK_LIBRARIES(ensemble)
