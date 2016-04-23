@@ -174,6 +174,17 @@ int main( int argc, char** argv )
     while(1) {
         char c = cvWaitKey(33); // press escape to quit
         if (c==27) break;
+        if (c=='n')
+        {
+            cvReleaseImage(&img);
+            do {
+                idx = (idx+1+images.size())%images.size();
+            } while (images[idx].x[0]>=0);
+            stringstream ss;
+            ss << argv[1] << images[idx].imgname;
+            img = cvLoadImage(ss.str().c_str());
+            saveAnnotations(argv[3]);
+        }
         if (c==',')
         {
             cvReleaseImage(&img);
