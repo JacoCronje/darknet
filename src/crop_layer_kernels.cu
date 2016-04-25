@@ -332,22 +332,23 @@ extern "C" void forward_crop_layer_gpu(crop_layer layer, network_state state)
         check_error(cudaPeekAtLastError());
     }
 
-       cuda_pull_array(layer.output_gpu, layer.output, size);
-       image im = float_to_image(layer.out_w, layer.out_h, layer.c, layer.output + 0*(layer.c*layer.out_w*layer.out_h));
-       image im2 = float_to_image(layer.out_w, layer.out_h, layer.c, layer.output + 1*(layer.c*layer.out_w*layer.out_h));
-       image im3 = float_to_image(layer.out_w, layer.out_h, layer.c, layer.output + 2*(layer.c*layer.out_w*layer.out_h));
+//       cuda_pull_array(layer.output_gpu, layer.output, size);
+//       image im = float_to_image(layer.out_w, layer.out_h, layer.c, layer.output + 0*(layer.c*layer.out_w*layer.out_h));
+//       image im2 = float_to_image(layer.out_w, layer.out_h, layer.c, layer.output + 1*(layer.c*layer.out_w*layer.out_h));
+//       image im3 = float_to_image(layer.out_w, layer.out_h, layer.c, layer.output + 2*(layer.c*layer.out_w*layer.out_h));
 
-       translate_image(im, -translate);
-       scale_image(im, 1/scale);
-       translate_image(im2, -translate);
-       scale_image(im2, 1/scale);
-       translate_image(im3, -translate);
-       scale_image(im3, 1/scale);
+//       translate_image(im, -translate);
+//       scale_image(im, 1/scale);
+//       translate_image(im2, -translate);
+//       scale_image(im2, 1/scale);
+//       translate_image(im3, -translate);
+//       scale_image(im3, 1/scale);
        
-       show_image(im, "cropped");
-       show_image(im2, "cropped2");
-       show_image(im3, "cropped3");
-       cvWaitKey(0);
-//       */
+//       show_image(im, "cropped");
+//       show_image(im2, "cropped2");
+//       show_image(im3, "cropped3");
+//       cvWaitKey(0);
+
+
 }
 
