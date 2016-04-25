@@ -66,6 +66,8 @@ struct layer{
     float jitter;
     float saturation;
     float exposure;
+    float scaling;
+    float blur;
     float shift;
     int softmax;
     int classes;

@@ -279,6 +279,8 @@ crop_layer parse_crop(list *options, size_params params)
     float angle = option_find_float(options, "angle",0);
     float saturation = option_find_float(options, "saturation",1);
     float exposure = option_find_float(options, "exposure",1);
+    float scaling = option_find_float(options, "scaling",1);
+    float blur = option_find_float(options, "blur",0);
 
     int batch,h,w,c;
     h = params.h;
@@ -289,7 +291,7 @@ crop_layer parse_crop(list *options, size_params params)
 
     int noadjust = option_find_int_quiet(options, "noadjust",0);
 
-    crop_layer l = make_crop_layer(batch,h,w,c,crop_height,crop_width,flip, angle, saturation, exposure);
+    crop_layer l = make_crop_layer(batch,h,w,c,crop_height,crop_width,flip, angle, saturation, exposure, scaling, blur);
     l.shift = option_find_float(options, "shift", 0);
     l.noadjust = noadjust;
     return l;
