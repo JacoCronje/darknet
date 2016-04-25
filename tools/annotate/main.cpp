@@ -120,12 +120,19 @@ void loadAnnotations(char *fname)
     fi.close();
 }
 
+int clicked = 0;
+char lastch = '_';
+
 void onmouse(int event, int x, int y, int flags, void* param)
 {
     if (event==CV_EVENT_MOUSEMOVE)
     {
         int *pp = (int*)param;
         *pp = x+(y<<12);
+    }
+    if (event==CV_EVENT_LBUTTONDOWN)
+    {
+        clicked = 1;
     }
 }
 
@@ -185,6 +192,18 @@ int main( int argc, char** argv )
             img = cvLoadImage(ss.str().c_str());
             saveAnnotations(argv[3]);
         }
+        if (c=='m')
+        {
+            cvReleaseImage(&img);
+            do {
+                idx = (idx-1+images.size())%images.size();
+            } while (images[idx].x[0]<0 || images[idx].x[1]<0 || images[idx].x[2]<0 || images[idx].x[3]<0);
+            idx = (idx+1+images.size())%images.size();
+            stringstream ss;
+            ss << argv[1] << images[idx].imgname;
+            img = cvLoadImage(ss.str().c_str());
+            saveAnnotations(argv[3]);
+        }
         if (c==',')
         {
             cvReleaseImage(&img);
@@ -229,6 +248,24 @@ int main( int argc, char** argv )
                 images[idx].x[cidx] = -1;
                 images[idx].y[cidx] = -1;
             }
+            lastch = c;
+        }
+        if (clicked==1)
+        {
+            c = lastch;
+            int mx = mousepos&4095;
+            int my = mousepos>>12;
+            int cidx = c-'1';
+            images[idx].x[cidx] = (double)(mx) / imgM->width;
+            images[idx].y[cidx] = (double)(my) / imgM->height;
+
+            cvReleaseImage(&img);
+            idx = (idx+1)%images.size();
+            stringstream ss;
+            ss << argv[1] << images[idx].imgname;
+            img = cvLoadImage(ss.str().c_str());
+            saveAnnotations(argv[3]);
+            clicked = 0;
         }
 
         //cvCopy(img, imgM, NULL);
