@@ -35,6 +35,7 @@ extern "C" {
 #include "shrinkadd_layer.h"
 #include "shrinkmax_layer.h"
 #include "augment_layer.h"
+#include "keypoint_layer.h"
 #include "blas.h"
 }
 
@@ -95,6 +96,8 @@ void forward_network_gpu(network net, network_state state)
             forward_shrinkmax_layer_gpu(l, state);
         } else if(l.type == AUGMENT){
             forward_augment_layer_gpu(l, state);
+        } else if(l.type == KEYPOINT){
+            forward_keypoint_layer_gpu(l, state);
         }
         state.input = l.output_gpu;
     }
@@ -158,6 +161,8 @@ void backward_network_gpu(network net, network_state state)
             backward_shrinkmax_layer_gpu(l, state);
         } else if(l.type == AUGMENT){
             backward_augment_layer_gpu(l, state);
+        } else if(l.type == KEYPOINT){
+            backward_keypoint_layer_gpu(l, state);
         }
     }
 }
@@ -239,6 +244,20 @@ float *network_predict_gpu(network net, float *input)
     forward_network_gpu(net, state);
     float *out = get_network_output_gpu(net);
     cuda_free(state.input);
+    return out;
+}
+
+float *network_predict_gpu_fromgpu(network net, float *input)
+{
+    network_state state;
+    state.index = 0;
+    state.net = net;
+    state.input = input;
+    state.truth = 0;
+    state.train = 0;
+    state.delta = 0;
+    forward_network_gpu(net, state);
+    float *out = get_network_output_gpu(net);
     return out;
 }
 

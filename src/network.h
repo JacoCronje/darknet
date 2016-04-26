@@ -56,6 +56,7 @@ typedef struct network_state {
 #ifdef GPU
 float train_network_datum_gpu(network net, float *x, float *y);
 float *network_predict_gpu(network net, float *input);
+float *network_predict_gpu_fromgpu(network net, float *input);
 float * get_network_output_gpu_layer(network net, int i);
 float * get_network_delta_gpu_layer(network net, int i);
 float *get_network_output_gpu(network net);

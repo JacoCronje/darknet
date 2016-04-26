@@ -37,7 +37,7 @@ void resize_driver(char *listfile, char *folder, int w, int h)
 
 }
 
-void train_driver(char *cfgfile, char *weightfile, char *trainlist)
+void train_driver(char *cfgfile, char *trainlist, char *weightfile)
 {
     data_seed = time(0);
     srand(time(0));
@@ -84,7 +84,7 @@ void train_driver(char *cfgfile, char *weightfile, char *trainlist)
 //        fprintf(stderr, "%d: %d %d\n", count, cl, num);
     }
     fclose(fp);
-
+//N=1000;
     train.shallow = 0;
     matrix X = make_matrix(N, net.w*net.h*3);
     matrix y = make_matrix(N, 10);
@@ -94,9 +94,9 @@ void train_driver(char *cfgfile, char *weightfile, char *trainlist)
     fprintf(stderr, "Loading training images\n");
     list *plist = get_paths(trainlist);//"data/driver_imgs128.txt");
     char **paths = (char **)list_to_array(plist);
-    for (i=0;i<plist->size;i++)
+    for (i=0;i<plist->size && i<N;i++)
     {
-        if ((i%1000)==0)
+        if ((i%100)==0)
             fprintf(stderr, "progress = %d of %d\n", i, plist->size);
         char *path = paths[i];
         image img = load_image_color(path, net.w, net.h);
@@ -150,6 +150,10 @@ void train_driver(char *cfgfile, char *weightfile, char *trainlist)
             fflush(stdout);
             time=clock();
         }
+
+      //  save_network_feature_maps(net, 0, net.n-3, "network", 10, 2);
+       // return 0;
+
         if (isnan(loss) || isnan(avg_loss))
         {
             // NaN detected!!!

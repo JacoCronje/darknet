@@ -28,6 +28,7 @@
 #include "shrinkadd_layer.h"
 #include "shrinkmax_layer.h"
 #include "augment_layer.h"
+#include "keypoint_layer.h"
 
 int get_current_batch(network net)
 {
@@ -117,6 +118,8 @@ char *get_layer_string(LAYER_TYPE a)
             return "sidebyside";
         case AUGMENT:
             return "augment";
+        case KEYPOINT:
+            return "keypoint";
         case SHRINKADD:
             return "shrinkadd";
         case SHRINKMAX:
@@ -189,6 +192,8 @@ void forward_network(network net, network_state state)
             forward_compact_layer(l, state);
         } else if(l.type == AUGMENT){
             forward_augment_layer(l, state);
+        } else if(l.type == KEYPOINT){
+            forward_keypoint_layer(l, state);
         } else if(l.type == SIDEBYSIDE){
             forward_sidebyside_layer(l, state);
         } else if(l.type == SHRINKADD){
@@ -309,6 +314,8 @@ void backward_network(network net, network_state state)
             backward_sidebyside_layer(l, state);
         } else if(l.type == AUGMENT){
             backward_augment_layer(l, state);
+        } else if(l.type == KEYPOINT){
+            backward_keypoint_layer(l, state);
         } else if(l.type == SHRINKADD){
             backward_shrinkadd_layer(l, state);
         } else if(l.type == SHRINKMAX){
