@@ -369,9 +369,10 @@ layer parse_compact(list *options, size_params params, network net)
 {
     char *l = option_find(options, "splits");
     int splits = atoi(l);
+    int method = option_find_int_quiet(options, "method", 0);
 
     int batch = params.batch;
-    layer s = make_compact_layer(batch, splits, params.w, params.h, params.c);
+    layer s = make_compact_layer(batch, splits, method, params.w, params.h, params.c);
 
     char *activation_s = option_find_str(options, "activation", "linear");
     ACTIVATION activation = get_activation(activation_s);
