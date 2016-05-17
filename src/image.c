@@ -894,12 +894,13 @@ void show_image_cv(image p, const char *name)
             char buff[256];
             sprintf(buff, "echo %s >> bad.list", filename);
             system(buff);
-            return make_image(10,10,3);
+            return make_image(10,10,channels);
             //exit(0);
         }
         image out = ipl_to_image(src);
         cvReleaseImage(&src);
-        rgbgr_image(out);
+        if (channels==3)
+            rgbgr_image(out);
         return out;
     }
 

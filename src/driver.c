@@ -33,6 +33,7 @@ void resize_driver(char *listfile, char *folder, int w, int h)
         char outname[512];
         sprintf(outname, "%s/%s", folder, fname);
         save_image(img, outname);
+        free_image(img);
     }
 
 }
@@ -57,7 +58,7 @@ void train_driver(char *cfgfile, char *trainlist, char *weightfile)
 
     fprintf(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net.learning_rate, net.momentum, net.decay);
 
-    data train;
+    data train, test;
 
     fprintf(stderr, "Loading training labels\n");
 
@@ -67,12 +68,20 @@ void train_driver(char *cfgfile, char *trainlist, char *weightfile)
     char tmp[512];
     int *lbl = malloc(65536*2*4);
     memset(lbl, 0xff, 65536*2*4);
+    int *lblperson = malloc(65536*2*4);
+    memset(lblperson, 0xff, 65536*2*4);
+    int pbit[100];
+    int pcnt[100];
+    memset(pbit, 0, sizeof(pbit));
+    memset(pcnt, 0, sizeof(pcnt));
     fscanf(fp, "%s", tmp);
     int N = 0;
     while (fscanf(fp, "%s", tmp)==1)
     {
         int cl = tmp[6]-'0';
         int num = tmp[12]-'0';
+        int person = (tmp[1]-'0')*100 + (tmp[2]-'0')*10 + (tmp[3]-'0');
+
         i = 13;
         while (tmp[i]!='.')
         {
@@ -81,17 +90,48 @@ void train_driver(char *cfgfile, char *trainlist, char *weightfile)
         }
         ++N;
         lbl[num] = cl;
+        lblperson[num] = person;
+        pbit[person] = 1;
+        pcnt[person]++;
 //        fprintf(stderr, "%d: %d %d\n", count, cl, num);
     }
     fclose(fp);
+
+    int personlist[100];
+    int nperson = 0;
+    for (i=0;i<100;i++)
+    {
+        if (pbit[i]==1)
+        {
+            personlist[nperson] = i;
+            nperson++;
+        }
+    }
+    int Ntrain = N;
+    int Ntest = 0;
+    for (j=0;j<5;j++)
+    {
+        do
+        {
+            i = rand()%nperson;
+        } while (pbit[personlist[i]]==0);
+        Ntrain -= pcnt[personlist[i]];
+        Ntest  += pcnt[personlist[i]];
+        pbit[personlist[i]] = 0;
+    }
+    fprintf(stderr, "Training images = %d Testing images = %d\n", Ntrain, Ntest);
+
 //N=1000;
     train.shallow = 0;
-    matrix X = make_matrix(N, net.w*net.h*3);
-    matrix y = make_matrix(N, 10);
-    train.X = X;
-    train.y = y;
+    train.X = make_matrix(Ntrain, net.w*net.h*net.c);
+    train.y = make_matrix(Ntrain, 10);
+    test.shallow = 0;
+    test.X = make_matrix(Ntest, net.w*net.h*net.c);
+    test.y = make_matrix(Ntest, 10);
+    int itrain = 0;
+    int itest = 0;
 
-    fprintf(stderr, "Loading training images\n");
+    fprintf(stderr, "Loading images\n");
     list *plist = get_paths(trainlist);//"data/driver_imgs128.txt");
     char **paths = (char **)list_to_array(plist);
     for (i=0;i<plist->size && i<N;i++)
@@ -99,7 +139,7 @@ void train_driver(char *cfgfile, char *trainlist, char *weightfile)
         if ((i%100)==0)
             fprintf(stderr, "progress = %d of %d\n", i, plist->size);
         char *path = paths[i];
-        image img = load_image_color(path, net.w, net.h);
+        image img = load_image(path, net.w, net.h, net.c);
         char fname[512];
         int n = strlen(path);
         for (j=n-1;j>=0;j--)
@@ -120,17 +160,28 @@ void train_driver(char *cfgfile, char *trainlist, char *weightfile)
                 if (lbl[num]<0 || lbl[num]>9)
                     fprintf(stderr, "ERROR = %d  %d %d\n", lbl[num], num, i);
 
-                y.vals[i][(int)lbl[num]] = 1;
-                for(j = 0; j < X.cols; ++j){
-                    X.vals[i][j] = (double)img.data[j];
+                if (pbit[lblperson[num]]==1)
+                {
+                    // train set
+                    train.y.vals[itrain][(int)lbl[num]] = 1;
+                    for(j = 0; j < train.X.cols; ++j){
+                        train.X.vals[itrain][j] = (float)(img.data[j]);//*255.f - 110.f;
+                    }
+                    itrain++;
+                } else
+                {
+                    // test set
+                    test.y.vals[itest][(int)lbl[num]] = 1;
+                    for(j = 0; j < test.X.cols; ++j){
+                        test.X.vals[itest][j] = (float)(img.data[j]);//*255.f - 110.f;
+                    }
+                    itest++;
                 }
                 break;
             }
         free_image(img);
     }
     //scale_data_rows(train, 1./255);
-
-    data* theData = split_data(train, N*0.9, N);
 
     clock_t time=clock();
     float a[4];
@@ -140,7 +191,7 @@ void train_driver(char *cfgfile, char *trainlist, char *weightfile)
 
     while(get_current_batch(net) < net.max_batches || net.max_batches == 0){
 
-        float loss = train_network_sgd(net, theData[0], 1);
+        float loss = train_network_sgd(net, train, 1);
         if(avg_loss == -1) avg_loss = loss;
         avg_loss = avg_loss*.95 + loss*.05;
         if(get_current_batch(net)%100 == 0)
@@ -163,17 +214,17 @@ void train_driver(char *cfgfile, char *trainlist, char *weightfile)
             if (nanCount>=5) break;
             continue;
         }
-        if(get_current_batch(net)%1000 == 0){
-            float *acc = network_accuracies(net, theData[1], 2);
+        if(get_current_batch(net)%500 == 0){
+            float *acc = network_accuracies(net, test, 2);
             a[2] = acc[0];
             a[3] = acc[1];
-            float mse1 = acc[2];
-            float *accT = network_accuracies(net, theData[0], 2);
+            float mse2 = acc[2];
+            float *accT = network_accuracies(net, train, 2);
             a[0] = accT[0];
             a[1] = accT[1];
-            float mse2 = accT[2];
-            fprintf(stderr, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse2, a[2], a[3], mse1);
-            fprintf(stdout, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse2, a[2], a[3], mse1);
+            float mse1 = accT[2];
+            fprintf(stderr, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse1, a[2], a[3], mse2);
+            fprintf(stdout, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse1, a[2], a[3], mse2);
             fflush(stdout);
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights",backup_directory,base, get_current_batch(net));
@@ -188,6 +239,230 @@ void train_driver(char *cfgfile, char *trainlist, char *weightfile)
 
     free_network(net);
     free_data(train);
+    free_data(test);
+}
+
+void trainfold_driver(char *cfgfile, char *trainlist, int K, char *weightfile)
+{
+    data_seed = time(0);
+    srand(time(0));
+
+    float avg_loss = -1;
+    char *base = basecfg(cfgfile);
+    char *backup_directory = "backup";
+    network net;// = parse_network_cfg(cfgfile);
+ //   if(weightfile){
+   //     load_weights(&net, weightfile);
+   // }
+
+    {
+        char buff[256];
+        sprintf(buff, "%s/%s.txt", backup_directory, base);
+        freopen(buff, "w", stdout);
+    }
+
+   // fprintf(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net.learning_rate, net.momentum, net.decay);
+
+    int i,j,k;
+    int foldK;
+
+    data train, test;
+
+    fprintf(stderr, "Loading training labels\n");
+
+    FILE *fp = fopen("data/driver_imgs_list.csv", "r");
+    if(!fp) file_error("data/driver_imgs_list.csv");
+    char tmp[512];
+    int *lbl = malloc(65536*2*4);
+    memset(lbl, 0xff, 65536*2*4);
+    int *lblperson = malloc(65536*2*4);
+    memset(lblperson, 0xff, 65536*2*4);
+    int pbit[128*32];
+    int pcnt[128];
+    memset(pbit, 0, sizeof(pbit));
+    memset(pcnt, 0, sizeof(pcnt));
+    fscanf(fp, "%s", tmp);
+    int N = 0;
+    while (fscanf(fp, "%s", tmp)==1)
+    {
+        int cl = tmp[6]-'0';
+        int num = tmp[12]-'0';
+        int person = (tmp[1]-'0')*100 + (tmp[2]-'0')*10 + (tmp[3]-'0');
+
+        i = 13;
+        while (tmp[i]!='.')
+        {
+            num = num*10 + (tmp[i]-'0');
+            i++;
+        }
+        ++N;
+        lbl[num] = cl;
+        lblperson[num] = person;
+        for (k=0;k<K;k++)
+            pbit[person+(k<<7)] = 1;
+        pcnt[person]++;
+//        fprintf(stderr, "%d: %d %d\n", count, cl, num);
+    }
+    fclose(fp);
+
+    int personlist[100];
+    int nperson = 0;
+    for (i=0;i<100;i++)
+    {
+        if (pbit[i]==1)
+        {
+            personlist[nperson] = i;
+            nperson++;
+        }
+    }
+    int Ntrain[32] = {N};
+    int Ntest[32] = {0};
+    srand(123579L);
+    for (k=0;k<K;k++)
+    {
+        Ntrain[k] = N;
+        Ntest[k] = 0;
+        for (j=0;j<5;j++)
+        {
+            do
+            {
+                i = rand()%nperson;
+            } while (pbit[personlist[i]+(k<<7)]==0);
+            Ntrain[k] -= pcnt[personlist[i]];
+            Ntest[k]  += pcnt[personlist[i]];
+            pbit[personlist[i]+(k<<7)] = 0;
+        }
+    }
+    //free_network(net);
+
+    data_seed = time(0);
+    srand(time(0));
+
+    double validError = 0;
+    for (foldK=0;foldK<K;foldK++)
+    {
+        net = parse_network_cfg(cfgfile);
+        if(weightfile){
+            load_weights(&net, weightfile);
+        }
+        fprintf(stderr, "Fold %d : Training images = %d Testing images = %d\n", foldK, Ntrain[foldK], Ntest[foldK]);
+        train.shallow = 0;
+        train.X = make_matrix(Ntrain[foldK], net.w*net.h*net.c);
+        train.y = make_matrix(Ntrain[foldK], 10);
+        test.shallow = 0;
+        test.X = make_matrix(Ntest[foldK], net.w*net.h*net.c);
+        test.y = make_matrix(Ntest[foldK], 10);
+        int itrain = 0;
+        int itest = 0;
+
+        fprintf(stderr, "Loading images\n");
+        list *plist = get_paths(trainlist);//"data/driver_imgs128.txt");
+        char **paths = (char **)list_to_array(plist);
+        for (i=0;i<plist->size && i<N;i++)
+        {
+            if ((i%2000)==0)
+                fprintf(stderr, "progress = %d of %d\n", i, plist->size);
+            char *path = paths[i];
+            image img = load_image(path, net.w, net.h, net.c);
+            int n = strlen(path);
+            for (j=n-1;j>=0;j--)
+                if (path[j]=='_')
+                {
+                    k = j+1;
+                    int num = path[k]-'0';
+                    k++;
+                    while (path[k]!='.')
+                    {
+                        num = num*10 + (path[k]-'0');
+                        k++;
+                    }
+                    if (lbl[num]<0 || lbl[num]>9)
+                        fprintf(stderr, "ERROR = %d  %d %d\n", lbl[num], num, i);
+
+                    if (pbit[lblperson[num]+(foldK<<7)]==1)
+                    {
+                        // train set
+                        train.y.vals[itrain][(int)lbl[num]] = 1;
+                        for(j = 0; j < train.X.cols; ++j){
+                            train.X.vals[itrain][j] = (float)(img.data[j]);//*255.f - 110.f;
+                        }
+                        itrain++;
+                    } else
+                    {
+                        // test set
+                        test.y.vals[itest][(int)lbl[num]] = 1;
+                        for(j = 0; j < test.X.cols; ++j){
+                            test.X.vals[itest][j] = (float)(img.data[j]);//*255.f - 110.f;
+                        }
+                        itest++;
+                    }
+                    break;
+                }
+            free_image(img);
+        }
+
+        clock_t time=clock();
+        float a[4];
+
+        char backup_net[256];
+        int nanCount = 0;
+
+        while(get_current_batch(net) < net.max_batches || net.max_batches == 0){
+
+            float loss = train_network_sgd(net, train, 1);
+            if(avg_loss == -1) avg_loss = loss;
+            avg_loss = avg_loss*.95 + loss*.05;
+            if(get_current_batch(net)%100 == 0)
+            {
+                fprintf(stderr, "%d, %.3f: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), (float)(*net.seen)/(Ntrain[foldK]), loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
+                fprintf(stdout, "%d, %.3f: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), (float)(*net.seen)/(Ntrain[foldK]), loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
+                fflush(stdout);
+                time=clock();
+            }
+          //  save_network_feature_maps(net, 0, net.n-3, "network", 10, 2);
+           // return 0;
+            if (isnan(loss) || isnan(avg_loss))
+            {
+                // NaN detected!!!
+                free_network(net);
+                load_weights(&net, backup_net);
+                nanCount++;
+                if (nanCount>=5) break;
+                continue;
+            }
+            if(get_current_batch(net)%500 == 0){
+                float *acc = network_accuracies(net, test, 2);
+                a[2] = acc[0];
+                a[3] = acc[1];
+                float mse2 = acc[2];
+                float *accT = network_accuracies(net, train, 2);
+                a[0] = accT[0];
+                a[1] = accT[1];
+                float mse1 = accT[2];
+                fprintf(stderr, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse1, a[2], a[3], mse2);
+                fprintf(stdout, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse1, a[2], a[3], mse2);
+                fflush(stdout);
+                char buff[256];
+                sprintf(buff, "%s/%s_k%d_%d.weights",backup_directory,base, foldK, get_current_batch(net));
+                sprintf(backup_net, "%s/%s_k%d_%d.weights",backup_directory,base, foldK, get_current_batch(net));
+                save_weights(net, buff);
+                nanCount = 0;
+                if (get_current_batch(net)+1>=net.max_batches)
+                {
+                    validError += mse2;
+                }
+            }
+        }
+        fprintf(stderr, "Validation error %f\n", validError/(foldK+1));
+        fprintf(stdout, "Validation error %f\n", validError/(foldK+1));
+        char buff[256];
+        sprintf(buff, "%s/%s_k%d.weights", backup_directory, base, foldK);
+        save_weights(net, buff);
+
+        free_network(net);
+        free_data(train);
+        free_data(test);
+    }
 }
 
 void testpoints_driver(char *cfgfile, char *weightfile, char *folder, char *imglist, char *outfile)
@@ -216,6 +491,7 @@ void testpoints_driver(char *cfgfile, char *weightfile, char *folder, char *imgl
         image img = load_image_color(tmp, net.w, net.h);
         for(j = 0; j < net.w*net.h*3; ++j){
             dat[j+nidx*net.w*net.h*3] = ((double)img.data[j]);// / 255;
+
         }
         nidx++;
         if (nidx==1)
@@ -377,7 +653,7 @@ void test_driver(char *filename, char *weightfile, char *listfile)
     freopen("driver_predict.txt", "w", stdout);
     fprintf(stdout, "img,c0,c1,c2,c3,c4,c5,c6,c7,c8,c9\n");
 
-    float *dat = malloc(net.w*net.h*3*16*sizeof(float));
+    float *dat = malloc(net.w*net.h*net.c*16*sizeof(float));
     //matrix X = make_matrix(16, 64*64*3);
 
     char* fname[16];
@@ -405,9 +681,10 @@ void test_driver(char *filename, char *weightfile, char *listfile)
                 break;
             }
       //  fprintf(stderr, "Loading image %s %d %d\n", path,w, h);
-        image img = load_image_color(path, net.w, net.h);
-        for(j = 0; j < net.w*net.h*3; ++j){
-            dat[j+nidx*net.w*net.h*3] = ((double)img.data[j]);// / 255;
+        image img = load_image(path, net.w, net.h, net.c);
+        for(j = 0; j < net.w*net.h*net.c; ++j){
+            dat[j+nidx*net.w*net.h*net.c] = ((double)img.data[j]);// / 255;
+            //dat[j+nidx*net.w*net.h*net.c] = (float)(img.data[j])*255.f - 110.f;
         }
        // printf("predicting\n");
         nidx++;
@@ -503,6 +780,7 @@ void run_driver(int argc, char **argv)
         fprintf(stderr, "usage: %s %s [trainpoints] [cfg] [imagefolder] [imagelist] [weights]\n", argv[0], argv[1]);
         fprintf(stderr, "usage: %s %s [testpoints] [cfg] [weights] [imagefolder] [imagelist] [outfile]\n", argv[0], argv[1]);
         fprintf(stderr, "usage: %s %s [train] [cfg] [imagelist] [weights]\n", argv[0], argv[1]);
+        fprintf(stderr, "usage: %s %s [trainfold] [cfg] [imagelist] [k] [weights]\n", argv[0], argv[1]);
         return;
     }
 
@@ -512,6 +790,10 @@ void run_driver(int argc, char **argv)
     if(0==strcmp(argv[2], "train"))
     {
         train_driver(cfg, argv[4],  (argc>5 ? argv[5] : 0));
+    }
+    else if(0==strcmp(argv[2], "trainfold"))
+    {
+        trainfold_driver(cfg, argv[4], atoi(argv[5]), (argc>6 ? argv[6] : 0));
     }
     else if(0==strcmp(argv[2], "test"))
     {
