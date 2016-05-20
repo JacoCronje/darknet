@@ -677,6 +677,7 @@ void save_network_feature_maps(network net, int layerFrom, int layerTo, char* fi
     int mh = 0;
     int mw = 0;
     int mc = 0;
+    int rr = (rand()%net.batch);
     for (lay=layerFrom;lay<=layerTo;lay++)
     {
         int h,w,c;
@@ -684,7 +685,7 @@ void save_network_feature_maps(network net, int layerFrom, int layerTo, char* fi
         w = net.layers[lay].out_w;
         c = net.layers[lay].out_c;
 #ifdef GPU
-        cuda_pull_array(net.layers[lay].output_gpu, net.layers[lay].output, net.layers[lay].outputs);
+        cuda_pull_array(net.layers[lay].output_gpu+w*h*c*rr, net.layers[lay].output, net.layers[lay].outputs);
 #endif
         image img = float_to_image(w,h,c,net.layers[lay].output);
         imgLay[lay] = collapse_image_layers(img, vgap);

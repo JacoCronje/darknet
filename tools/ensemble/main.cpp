@@ -126,6 +126,8 @@ int main( int argc, char** argv )
         for (int i=0;i<dest.size();i++)
         {
             dest[i] /= cnt;
+            if (dest[i]<0.01) dest[i] = 0;
+            if (dest[i]>0.99) dest[i] = 1.0;
         }
     }
 

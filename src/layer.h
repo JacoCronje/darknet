@@ -80,6 +80,7 @@ struct layer{
     int joint;
     int noadjust;
     int gap;
+    int method;
 
     int n_aug;
     int *flips;
