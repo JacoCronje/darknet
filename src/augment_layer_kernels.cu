@@ -427,6 +427,10 @@ __global__ void augment_forward_split_kernel(int size, int w, int h, int c, int 
 
         int ix = (int)floorf(rx);
         int iy = (int)floorf(ry);
+
+    //    ix = (c_flips[i] ? (w-x-1) : x);
+    //    iy = y;
+
         if (ix < 0 || ix >= out_w || iy < 0 || iy >= out_h) return;
         ridx = rbase+ix+iy*out_w;
     }

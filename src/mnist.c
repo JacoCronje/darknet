@@ -164,20 +164,35 @@ void test_mnist_multi(char *filename, char *weightfile)
 
     int i;
     for(i = 0; i < test.X.rows; ++i){
-        image im = float_to_image(96, 96, 3, test.X.vals[i]);
+        image im = float_to_image(28, 28, 1, test.X.vals[i]);
 
         float pred[10] = {0};
 
         float *p = network_predict(net, im.data);
         axpy_cpu(10, 1, p, 1, pred, 1);
-        flip_image(im);
-        p = network_predict(net, im.data);
+      //  flip_image(im);
+        image im1 = rotate_image(im, -2.0*3.1415926/180.0);
+        image im2 = rotate_image(im, 2.0*3.1415926/180.0);
+        image im3 = rotate_image(im, -3.0*3.1415926/180.0);
+        image im4 = rotate_image(im, 3.0*3.1415926/180.0);
+        p = network_predict(net, im1.data);
+        axpy_cpu(10, 1, p, 1, pred, 1);
+        p = network_predict(net, im2.data);
+        axpy_cpu(10, 1, p, 1, pred, 1);
+        p = network_predict(net, im3.data);
+        axpy_cpu(10, 1, p, 1, pred, 1);
+        p = network_predict(net, im4.data);
         axpy_cpu(10, 1, p, 1, pred, 1);
 
         int index = max_index(pred, 10);
         int class = max_index(test.y.vals[i], 10);
         if(index == class) avg_acc += 1;
         free_image(im);
+        free_image(im1);
+        free_image(im2);
+        free_image(im3);
+        free_image(im4);
+        printf("%4d: %.2f%%\n", i, 100.*avg_acc/(i+1));
     }
     printf("%4d: %.2f%%\n", i, 100.*avg_acc/(i+1));
 }
