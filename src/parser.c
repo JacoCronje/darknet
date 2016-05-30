@@ -27,6 +27,7 @@
 #include "shrinkmax_layer.h"
 #include "augment_layer.h"
 #include "keypoint_layer.h"
+#include "group_layer.h"
 #include "list.h"
 #include "option_list.h"
 #include "utils.h"
@@ -60,6 +61,7 @@ int is_detection(section *s);
 int is_route(section *s);
 int is_augment(section *s);
 int is_keypoint(section *s);
+int is_group(section *s);
 
 list *read_cfg(char *filename);
 
@@ -542,6 +544,28 @@ layer parse_activation(list *options, size_params params)
     return l;
 }
 
+layer parse_group(list *options, size_params params, network net)
+{
+    char *l = option_find(options, "channels");
+    int len = strlen(l);
+    if(!l) error("Group Layer must specify output channels");
+    int n = 1;
+    int i;
+    for(i = 0; i < len; ++i){
+        if (l[i] == ',') ++n;
+    }
+
+    int *out_channels = calloc(n, sizeof(int));
+    for(i = 0; i < n; ++i){
+        int index = atoi(l);
+        l = strchr(l, ',')+1;
+        out_channels[i] = index;
+    }
+    group_layer layer = make_group_layer(params.batch, n, out_channels, params.w, params.h, params.c);
+    return layer;
+
+}
+
 route_layer parse_route(list *options, size_params params, network net)
 {
     char *l = option_find(options, "layers");   
@@ -742,6 +766,8 @@ network parse_network_cfg(char *filename)
             l = parse_augment(options, params, net);
         }else if(is_keypoint(s)){
             l = parse_keypoint(options, params, net);
+        }else if(is_group(s)){
+            l = parse_group(options, params, net);
         }else if(is_dropout(s)){
             l = parse_dropout(options, params);
             l.output = net.layers[count-1].output;
@@ -796,6 +822,10 @@ int is_augment(section *s)
 int is_keypoint(section *s)
 {
     return (strcmp(s->type, "[keypoint]")==0);
+}
+int is_group(section *s)
+{
+    return (strcmp(s->type, "[group]")==0);
 }
 int is_shrinkmax(section *s)
 {

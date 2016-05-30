@@ -29,7 +29,8 @@ typedef enum {
     SHRINKADD,
     SHRINKMAX,
     AUGMENT,
-    KEYPOINT
+    KEYPOINT,
+    GROUP
 } LAYER_TYPE;
 
 typedef enum{

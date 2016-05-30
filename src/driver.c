@@ -465,6 +465,74 @@ void trainfold_driver(char *cfgfile, char *trainlist, int K, char *weightfile)
     }
 }
 
+
+void extractparts_driver(char *cfgfile, char *weightfile, char *imglist, char *folder)
+{
+    network net = parse_network_cfg(cfgfile);
+    if(weightfile){
+        load_weights(&net, weightfile);
+    }
+    set_batch_network(&net, 1);
+    srand(time(0));
+   // freopen(outfile, "w", stdout);
+
+    float *dat = malloc(net.w*net.h*3*16*sizeof(float));
+
+    char tmp[512], tmp2[512];
+    char* fname[16];
+    int i,j,k;
+    for (i=0;i<16;i++) fname[i] = malloc(512);
+    int nidx = 0;
+    list *plist = get_paths(imglist);
+    char **paths = (char **)list_to_array(plist);
+    for (i=0;i<plist->size;i++)
+    {
+        for (j=strlen(paths[i]);j>=0;j--)
+        {
+            if (paths[i][j]=='/')
+            {
+                j++;
+                k = 0;
+                while (paths[i][j]!=0)
+                {
+                    tmp[k++] = paths[i][j];
+                    j++;
+                }
+                tmp[k-4] = 0;
+                break;
+            }
+        }
+       // sscanf(paths[i],"%[^,]%s\n",tmp2,tmp);
+      //  sprintf(tmp, "%s/%s", folder, tmp2);
+        image img = load_image_color(paths[i], net.w, net.h);
+        for (j = 0; j < net.w*net.h*3; ++j)
+        {
+            dat[j+nidx*net.w*net.h*3] = ((double)img.data[j]);// / 255;
+        }
+        float *p = network_predict_gpu(net, dat);
+        image imgF = load_image_color(paths[i], 640, 480);
+
+        for (k=0;k<4;k++)
+        {
+            int ix = 640*p[k*2];
+            int iy = 480*p[k*2+1];
+            if (ix<0) ix = 0;
+            if (ix>639) ix = 639;
+            if (iy<0) iy = 0;
+            if (iy>639) iy = 639;
+            image cropF2 = crop_image(imgF, ix-128, iy-128, 256, 256);
+            image cropF = resize_image(cropF2, 128, 128);
+            char buff[256];
+            sprintf(buff, "%s/%d_%s", folder, k, tmp);
+            save_image(cropF, buff);
+            free_image(cropF);
+            free_image(cropF2);
+        }
+        free_image(img);
+        free_image(imgF);
+    }
+}
+
 void testpoints_driver(char *cfgfile, char *weightfile, char *folder, char *imglist, char *outfile)
 {
     network net = parse_network_cfg(cfgfile);
@@ -781,6 +849,7 @@ void run_driver(int argc, char **argv)
         fprintf(stderr, "usage: %s %s [testpoints] [cfg] [weights] [imagefolder] [imagelist] [outfile]\n", argv[0], argv[1]);
         fprintf(stderr, "usage: %s %s [train] [cfg] [imagelist] [weights]\n", argv[0], argv[1]);
         fprintf(stderr, "usage: %s %s [trainfold] [cfg] [imagelist] [k] [weights]\n", argv[0], argv[1]);
+        fprintf(stderr, "usage: %s %s [extractparts] [cfg] [weights] [imagelist] [outfolder]\n", argv[0], argv[1]);
         return;
     }
 
@@ -813,6 +882,10 @@ void run_driver(int argc, char **argv)
     else if(0==strcmp(argv[2], "testpoints"))
     {
         testpoints_driver(cfg, weights, argv[5], argv[6], argv[7]);
+    }
+    else if(0==strcmp(argv[2], "extractparts"))
+    {
+        extractparts_driver(cfg, weights, argv[5], argv[6]);
     }
 
 }

@@ -114,6 +114,8 @@ char *get_layer_string(LAYER_TYPE a)
             return "shortcut";
         case COMPACT:
             return "compact";
+        case GROUP:
+            return "group";
         case SIDEBYSIDE:
             return "sidebyside";
         case AUGMENT:
@@ -190,6 +192,8 @@ void forward_network(network net, network_state state)
             forward_shortcut_layer(l, state);
         } else if(l.type == COMPACT){
             forward_compact_layer(l, state);
+        } else if(l.type == GROUP){
+            forward_group_layer(l, state);
         } else if(l.type == AUGMENT){
             forward_augment_layer(l, state);
         } else if(l.type == KEYPOINT){
@@ -310,6 +314,8 @@ void backward_network(network net, network_state state)
             backward_shortcut_layer(l, state);
         } else if(l.type == COMPACT){
             backward_compact_layer(l, state);
+        } else if(l.type == GROUP){
+            backward_group_layer(l, state);
         } else if(l.type == SIDEBYSIDE){
             backward_sidebyside_layer(l, state);
         } else if(l.type == AUGMENT){

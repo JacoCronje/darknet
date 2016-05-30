@@ -36,6 +36,7 @@ extern "C" {
 #include "shrinkmax_layer.h"
 #include "augment_layer.h"
 #include "keypoint_layer.h"
+#include "group_layer.h"
 #include "blas.h"
 }
 
@@ -98,6 +99,8 @@ void forward_network_gpu(network net, network_state state)
             forward_augment_layer_gpu(l, state);
         } else if(l.type == KEYPOINT){
             forward_keypoint_layer_gpu(l, state);
+        } else if(l.type == GROUP){
+            forward_group_layer_gpu(l, state);
         }
         state.input = l.output_gpu;
     }
@@ -163,6 +166,8 @@ void backward_network_gpu(network net, network_state state)
             backward_augment_layer_gpu(l, state);
         } else if(l.type == KEYPOINT){
             backward_keypoint_layer_gpu(l, state);
+        } else if(l.type == GROUP){
+            backward_group_layer_gpu(l, state);
         }
     }
 }
