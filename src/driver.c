@@ -750,7 +750,8 @@ void extractparts_driver(char *cfgfile, char *weightfile, char *imglist, char *f
             image cropF2 = crop_image(imgF, ix-128, iy-128, 256, 256);
             image cropF = resize_image(cropF2, 128, 128);
             char buff[256];
-            sprintf(buff, "%s/%d_%s", folder, k, tmp);
+            tmp[0] = '0'+k;
+            sprintf(buff, "%s/%s", folder, tmp);
             save_image(cropF, buff);
             free_image(cropF);
             free_image(cropF2);
