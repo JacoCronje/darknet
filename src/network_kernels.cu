@@ -46,9 +46,11 @@ float * get_network_output_gpu(network net);
 
 void forward_network_gpu(network net, network_state state)
 {
+    float* net_input = state.input;
     int i;
     for(i = 0; i < net.n; ++i){
         state.index = i;
+        net.layers[i].net_input = net_input;
         layer l = net.layers[i];
         if(l.delta_gpu){
             fill_ongpu(l.outputs * l.batch, 0, l.delta_gpu, 1);
@@ -100,7 +102,7 @@ void forward_network_gpu(network net, network_state state)
         } else if(l.type == KEYPOINT){
             forward_keypoint_layer_gpu(l, state);
         } else if(l.type == GROUP){
-            forward_group_layer_gpu(l, state);
+            forward_group_layer_gpu(l, net);
         }
         state.input = l.output_gpu;
     }
@@ -167,7 +169,7 @@ void backward_network_gpu(network net, network_state state)
         } else if(l.type == KEYPOINT){
             backward_keypoint_layer_gpu(l, state);
         } else if(l.type == GROUP){
-            backward_group_layer_gpu(l, state);
+            backward_group_layer_gpu(l, net);
         }
     }
 }
@@ -242,6 +244,7 @@ float *network_predict_gpu(network net, float *input)
     network_state state;
     state.index = 0;
     state.net = net;
+ //   fprintf(stderr,"%f %f %f\n", input[0], input[1], input[2]);
     state.input = cuda_make_array(input, size);
     state.truth = 0;
     state.train = 0;

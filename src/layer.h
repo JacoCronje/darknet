@@ -116,6 +116,7 @@ struct layer{
     float *biases;
     float *bias_updates;
 
+    int *similar;
     float *scales;
     float *scale_updates;
 
@@ -129,6 +130,8 @@ struct layer{
     float * output;
     float * squared;
     float * norms;
+
+    float * net_input;
 
     float * spatial_mean;
     float * mean;

@@ -11,7 +11,7 @@
   - try pixel lookup instead of bilinear
   */
 
-layer make_augment_layer(int batch, int merge, int gap, int n_aug, float* angles, int *flips, float* scales, int w, int h, int c)
+layer make_augment_layer(int batch, int merge, int gap, int n_aug, float* angles, int *flips, float* scales, int* similar, int w, int h, int c)
 {
     int i;
     layer l = {0};
@@ -33,10 +33,14 @@ layer make_augment_layer(int batch, int merge, int gap, int n_aug, float* angles
     fprintf(stderr," S=%.2f", scales[0]);
     for (i=1;i<n_aug;i++)
         fprintf(stderr, ",%.2f", scales[i]);
+    fprintf(stderr," Sim=%.2f", similar[0]);
+    for (i=1;i<n_aug;i++)
+        fprintf(stderr, ",%d", similar[i]);
 
     l.angles = angles;
     l.flips = flips;
     l.scales = scales;
+    l.similar = similar;
     l.out_w = w;
     if (merge==2)
     {
@@ -90,10 +94,18 @@ void backward_augment_layer(const layer l, network_state state)
 #ifdef GPU
 void forward_augment_layer_gpu(const layer l, network_state state)
 {
-    int c, b, a;
+    int c, b, a, bi, j, k, jj;
+    float cpu_dt[128*128];
 
     if (l.index==0)
     {
+
+        int y_one = get_network_output_size(state.net);
+        int y_size = y_one*l.batch;
+        if (state.train==1)
+        {
+            cuda_pull_array(state.truth, cpu_dt, y_size);
+        }
         // clear
         const_ongpu(l.out_h*l.out_w*l.c*l.batch, 0, l.output_gpu+b*l.outputs, 1);
         for (b=0;b<l.batch;b++)
@@ -106,11 +118,43 @@ void forward_augment_layer_gpu(const layer l, network_state state)
             }
             for (a=0;a<l.n_aug;a++)
             {
-                for (c=0;c<l.c;c++)
+                if (l.similar[a]==0 || state.train==0)
                 {
-                    augment_forward_gpu(l.w, l.h, state.input+b*l.inputs+l.w*l.h*c,
-                                        l.output_gpu+b*l.outputs+c*l.out_h*l.out_w+l.w*(l.gap+l.h)*(1+a),
-                                        l.angles[a], l.flips[a], l.scales[a]);
+                    for (c=0;c<l.c;c++)
+                    {
+                        augment_forward_gpu(l.w, l.h, state.input+b*l.inputs+l.w*l.h*c,
+                                            l.output_gpu+b*l.outputs+c*l.out_h*l.out_w+l.w*(l.gap+l.h)*(1+a),
+                                            l.angles[a], l.flips[a], l.scales[a]);
+                    }
+                }
+                else if (l.similar[a]==1)
+                {
+                    // copy from other image in batch with same class
+                    bi = b;
+                    for (jj=1;jj<l.batch;jj++)
+                    {
+                        j = (b+jj)%l.batch;
+                        int diff = 0;
+                        for (k=0;k<y_one;k++)
+                            if (fabs(cpu_dt[k+b*y_one]-cpu_dt[k+j*y_one])>0.001)
+                            {
+                                diff++;
+                                break;
+                            }
+                        if (diff==0)
+                        {
+                            bi = j;
+                            break;
+                        }
+                    }
+
+                    for (c=0;c<l.c;c++)
+                    {
+                        augment_forward_gpu(l.w, l.h, state.input+bi*l.inputs+l.w*l.h*c,
+                                            l.output_gpu+b*l.outputs+c*l.out_h*l.out_w+l.w*(l.gap+l.h)*(1+a),
+                                            l.angles[a], l.flips[a], l.scales[a]);
+                    }
+
                 }
             }
         }

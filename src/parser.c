@@ -432,6 +432,7 @@ layer parse_augment(list *options, size_params params, network net)
     float *angles = 0;
     int *flips = 0;
     float *scales = 0;
+    int *similar = 0;
     int n_aug = 0;
 
     int n;
@@ -508,8 +509,33 @@ layer parse_augment(list *options, size_params params, network net)
         error("Number of scales doesn't match the number of angles or flips.");
     }
 
+    n = 0;
+    l = option_find(options, "similar");
+    if (l)
+    {
+        int len = strlen(l);
+        n = 1;
+        int i;
+        for(i = 0; i < len; ++i){
+            if (l[i] == ',') ++n;
+        }
+        similar = calloc(n, sizeof(int));
+        for(i = 0; i < n; ++i){
+            int sim = atoi(l);
+            l = strchr(l, ',')+1;
+            similar[i] = sim;
+        }
+    } else
+    {
+        error("Similar should be defined!");
+    }
+    if (n!=n_aug)
+    {
+        error("Number of similars doesn't match the number of angles or flips.");
+    }
+
     int batch = params.batch;
-    layer s = make_augment_layer(batch, merge, gap, n_aug, angles, flips, scales, params.w, params.h, params.c);
+    layer s = make_augment_layer(batch, merge, gap, n_aug, angles, flips, scales, similar, params.w, params.h, params.c);
 
     char *activation_s = option_find_str(options, "activation", "linear");
     ACTIVATION activation = get_activation(activation_s);
@@ -561,7 +587,8 @@ layer parse_group(list *options, size_params params, network net)
         l = strchr(l, ',')+1;
         out_channels[i] = index;
     }
-    group_layer layer = make_group_layer(params.batch, n, out_channels, params.w, params.h, params.c);
+    group_layer layer = make_group_layer(params.batch, n, out_channels, net.w, net.h, net.c);
+    //group_layer layer = make_group_layer(params.batch, n, out_channels, params.w, params.h, params.c);
     return layer;
 
 }

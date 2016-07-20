@@ -79,6 +79,8 @@ void train_stl10(char *cfgfile, char *weightfile, int fold)
             if (nanCount>=5) break;
             continue;
         }
+           //         save_network_feature_maps(net, 0, net.n-3, "network", 10, 2);
+             //        return;
 //        if(*net.seen/N > epoch){
 //            epoch = *net.seen/N;
 //            char buff[256];
@@ -87,14 +89,25 @@ void train_stl10(char *cfgfile, char *weightfile, int fold)
 
 //        }
         if(get_current_batch(net)%1000 == 0){
+            int i,z;
+//            for (i=0;i<test.X.rows;i++)
+//            for (z=0;z<test.X.cols;z++)
+//            test.X.vals[i][z] = 0;//(float)(img.data[jk]);
+//            test.w = net.w;
+//            test.h = net.h;
+
+
             float *acc = network_accuracies(net, test, 2);
-            a[2] = acc[0];
+//            save_network_feature_maps(net, 0, net.n-3, "network", 10, 2);
+//             return 0;
+
+             a[2] = acc[0];
             a[3] = acc[1];
-            float mse1 = acc[2];
+            float mse2 = acc[2];
             float *accT = network_accuracies(net, train, 2);
             a[0] = accT[0];
             a[1] = accT[1];
-            float mse2 = accT[2];
+            float mse1 = accT[2];
             fprintf(stderr, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse1, a[2], a[3], mse2);
             fprintf(stdout, "Accuracy: train(%f %f %f) test(%f %f %f)\n", a[0], a[1], mse1, a[2], a[3], mse2);
             fflush(stdout);

@@ -137,7 +137,7 @@ __global__ void levels_image_kernel(float *image, float *rand, int batch, int c,
         image[x + w*(y + h*0)] = rgb.x*scale + translate + (rshift - .5)*shift;
         image[x + w*(y + h*1)] = rgb.y*scale + translate + (gshift - .5)*shift;
         image[x + w*(y + h*2)] = rgb.z*scale + translate + (bshift - .5)*shift;
-    } else
+    } else if (c==1)
     {
         for (int cc=0;cc<c;cc++)
         {
@@ -155,6 +155,17 @@ __global__ void levels_image_kernel(float *image, float *rand, int batch, int c,
             }
             image[x + w*(y + h*cc)] = rgb.x*scale + translate + (rshift - .5)*shift;
         }
+    } else
+    {
+        for (int cc=0;cc<c;cc++)
+        {
+            float r = image[x + w*(y + h*cc)];
+            if(!train){
+                shift = 0;
+            }
+            image[x + w*(y + h*cc)] = r*scale + translate + (rshift - .5)*shift;
+        }
+
     }
 
 }

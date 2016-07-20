@@ -10,8 +10,8 @@ void forward_group_layer(const group_layer l, network_state state);
 void backward_group_layer(const group_layer l, network_state state);
 
 #ifdef GPU
-void forward_group_layer_gpu(const group_layer l, network_state state);
-void backward_group_layer_gpu(const group_layer l, network_state state);
+void forward_group_layer_gpu(const group_layer l, network net);
+void backward_group_layer_gpu(const group_layer l, network net);
 #endif
 
 #endif

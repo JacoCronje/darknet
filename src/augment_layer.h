@@ -4,7 +4,7 @@
 #include "layer.h"
 #include "network.h"
 
-layer make_augment_layer(int batch, int merge, int gap, int n_aug, float* angles, int *flips, float* scales, int w, int h, int c);
+layer make_augment_layer(int batch, int merge, int gap, int n_aug, float* angles, int *flips, float* scales, int* similar, int w, int h, int c);
 void forward_augment_layer(const layer l, network_state state);
 void backward_augment_layer(const layer l, network_state state);
 

@@ -149,9 +149,11 @@ network make_network(int n)
 
 void forward_network(network net, network_state state)
 {
+    float* net_input = state.input;
     int i;
     for(i = 0; i < net.n; ++i){
         state.index = i;
+        net.layers[i].net_input = net_input;
         layer l = net.layers[i];
         if(l.delta){
             scal_cpu(l.outputs * l.batch, 0, l.delta, 1);
@@ -571,6 +573,7 @@ matrix network_predict_data(network net, data test)
 {
     int i,j,b;
     int k = get_network_output_size(net);
+   // fprintf(stderr, "k=%d rows=%d cols=%d batch=%d\n", k, test.X.rows, test.X.cols, net.batch);
     matrix pred = make_matrix(test.X.rows, k);
     float *X = calloc(net.batch*test.X.cols, sizeof(float));
     for(i = 0; i < test.X.rows; i += net.batch){
@@ -683,7 +686,7 @@ void save_network_feature_maps(network net, int layerFrom, int layerTo, char* fi
     int mh = 0;
     int mw = 0;
     int mc = 0;
-    int rr = (rand()%net.batch);
+    int rr = 0;//(rand()%net.batch);
     for (lay=layerFrom;lay<=layerTo;lay++)
     {
         int h,w,c;
