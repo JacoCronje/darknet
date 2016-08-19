@@ -29,6 +29,7 @@ extern void run_stl10(int argc, char **argv);
 extern void run_mnist(int argc, char **argv);
 extern void run_driver(int argc, char **argv);
 extern void run_cgm(int argc, char **argv);
+extern void run_segment(int argc, char **argv);
 
 void change_rate(char *filename, float scale, float add)
 {
@@ -241,6 +242,8 @@ int main(int argc, char **argv)
         run_stl10(argc, argv);
     } else if (0 == strcmp(argv[1], "cgm")){
         run_cgm(argc, argv);
+    } else if (0 == strcmp(argv[1], "segment")){
+        run_segment(argc, argv);
     } else if (0 == strcmp(argv[1], "go")){
         run_go(argc, argv);
     } else if (0 == strcmp(argv[1], "rnn")){

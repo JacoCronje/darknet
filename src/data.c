@@ -1063,6 +1063,16 @@ data load_stl10_data_fold(char *filenameImages, char *filenameLabels, char *file
 void get_random_batch(data d, int n, float *X, float *y)
 {
     int j;
+//    int numc = d.y.cols;
+//    for(j = 0; j < n; ++j){
+//        int index = 0;
+//        do
+//        {
+//            index = rand_r(&data_seed)%d.X.rows;
+//        } while (d.y.vals[index][(j%numc)]<0.5);
+//        memcpy(X+j*d.X.cols, d.X.vals[index], d.X.cols*sizeof(float));
+//        memcpy(y+j*d.y.cols, d.y.vals[index], d.y.cols*sizeof(float));
+//    }
     for(j = 0; j < n; ++j){
         int index = rand_r(&data_seed)%d.X.rows;
         memcpy(X+j*d.X.cols, d.X.vals[index], d.X.cols*sizeof(float));

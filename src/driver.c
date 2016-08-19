@@ -470,8 +470,24 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
     data_seed = time(0);
     srand(time(0));
 
+
+    int augmentParts = 1;
+    if (K<0)
+    {
+        K = -K;
+        augmentParts = 0;
+    }
+
     float avg_loss = -1;
-    char *base = basecfg(cfgfile);
+    char base[1024];
+    if (augmentParts==1)
+    {
+        sprintf(base, "%sAUG",basecfg(cfgfile));
+    } else
+    {
+        sprintf(base, "%sNO",basecfg(cfgfile));
+    }
+    //char *base = basecfg(cfgfile);
     char *backup_directory = "backup";
     network net;
     {
@@ -684,9 +700,17 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
                 //train.y.vals[itrain][cl] = 1;
                 for (j=0;j<10;j++) y[i*10+j] = 0;
                 y[i*10+cl] = 1;
+                int iimg;
+                if (!augmentParts)
+                {
+                    iimg = rand()%nimgs[cl];
+                }
                 for (z=0;z<4;z++)
                 {
-                    int iimg = rand()%nimgs[cl]; /// move this outside loop not to mix class parts
+                    if (augmentParts)
+                    {
+                        iimg = rand()%nimgs[cl]; /// move this outside loop not to mix class parts
+                    }
                 //    fprintf(stderr, "%d %d %s %d\n", i, z, pathclass[cl][iimg], pathj[cl][iimg]);
                     pathclass[cl][iimg][pathj[cl][iimg]] = '0'+z;
                     image img = load_image(pathclass[cl][iimg], net.w, net.h, 3);
@@ -707,15 +731,15 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
             //float loss = train_network_sgd(net, train, 1);
             if(avg_loss == -1) avg_loss = loss;
             avg_loss = avg_loss*.95 + loss*.05;
-            if(get_current_batch(net)%1== 0)
+            if(get_current_batch(net)%100== 0)
             {
                 fprintf(stderr, "%d, %.3f: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), (float)(*net.seen)/(Ntrain[foldK]), loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
                 fprintf(stdout, "%d, %.3f: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), (float)(*net.seen)/(Ntrain[foldK]), loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
                 fflush(stdout);
                 time=clock();
             }
-     //     save_network_feature_maps(net, 0, net.n-3, "network", 10, 2);
-       //    return 0;
+       //   save_network_feature_maps(net, 0, net.n-3, "network", 10, 2);
+       //   return 0;
             if (isnan(loss) || isnan(avg_loss))
             {
                 // NaN detected!!!
@@ -725,7 +749,7 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
                 if (nanCount>=5) break;
                 continue;
             }
-            if(get_current_batch(net)%10 == 0){
+            if(get_current_batch(net)%500 == 0){
 //                for (i=0;i<test.X.rows;i++)
 //                for (z=0;z<test.X.cols;z++)
 //                test.X.vals[i][z] = 0;//(float)(img.data[jk]);

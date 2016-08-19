@@ -252,6 +252,7 @@ __global__ void  fast_mean_kernel(float *x, int batch, int filters, int spatial,
         for(i = 0; i < spatial; i += threads){
             int index = j*spatial*filters + filter*spatial + i + id;
             local[id] += (i+id < spatial) ? x[index] : 0;
+            //local[id] += (i+id+1 < spatial) ? x[index+1] : 0;
         }
     }
 
@@ -260,7 +261,7 @@ __global__ void  fast_mean_kernel(float *x, int batch, int filters, int spatial,
         for(i = 0; i < threads; ++i){
             mean[filter] += local[i];
         }
-        mean[filter] /= spatial * batch;
+        mean[filter] /= spatial * batch;// * 2;
     }
 }
 
