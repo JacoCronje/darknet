@@ -19,7 +19,7 @@ route_layer make_route_layer(int batch, int n, int *input_layers, int *input_siz
     int outputs = out_c*out_h*out_w;
     int inputs = 0;
     for(i = 0; i < n; ++i){
-        fprintf(stderr," %d", input_layers[i]);
+        fprintf(stderr," %d[%d]", input_layers[i], input_sizes[i]);
         inputs += input_sizes[i];
     }
     fprintf(stderr, "\n");
@@ -125,9 +125,11 @@ void backward_route_layer_gpu(const route_layer l, network net)
 {
     int i, j;
     int offset = 0;
-    for(i = 0; i < l.n; ++i){
+    for(i = 0; i < l.n; ++i)
+    {
         int index = l.input_layers[i];
         float *delta = net.layers[index].delta_gpu;
+        if (!delta) continue;
         if (net.layers[index].out_w == l.out_w && net.layers[index].out_h == l.out_h)
         {
             // same size, no scaling required
