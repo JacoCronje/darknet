@@ -476,6 +476,10 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
     {
         K = -K;
         augmentParts = 0;
+    } else if (K>100)
+    {
+        K -= 100;
+        augmentParts = 2; // no augmentation
     }
 
     float avg_loss = -1;
@@ -483,9 +487,12 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
     if (augmentParts==1)
     {
         sprintf(base, "%sAUG",basecfg(cfgfile));
-    } else
+    } else if (augmentParts==0)
     {
         sprintf(base, "%sNO",basecfg(cfgfile));
+    } else
+    {
+        sprintf(base, "%sFULL",basecfg(cfgfile));
     }
     //char *base = basecfg(cfgfile);
     char *backup_directory = "backup";
@@ -569,6 +576,7 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
 
     float *X;//= calloc(net.batch*net.w*net.h*net.c, sizeof(float));
     float *y;// = calloc(net.batch*10, sizeof(float));
+    char modname[512];
 
     double validError = 0;
     for (foldK=0;foldK<K;foldK++)
@@ -661,16 +669,28 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
                     {
                         int jk;
                         test.y.vals[itest][(int)lbl[num]] = 1;
-                        for (z=0;z<4;z++)
+                        if (augmentParts==2)
                         {
-                            path[j-3] = '0'+z;
-                          //  fprintf(stderr, "%s\n", path);
-                            image img = load_image(path, net.w, net.h, 3);
-                            for(jk = 0; jk < net.w*net.h*3; ++jk)
+                            sprintf(modname, "data/driver128/%s", &path[j-3]);
+                            image img = load_image(modname, net.w, net.h, 3);
+                            for(jj = 0; jj< net.w*net.h*net.c; ++jj)
                             {
-                                test.X.vals[itest][jk+(net.w*net.h*3*(z))] = (float)(img.data[jk]);
+                                test.X.vals[itest][jj] = (float)(img.data[jj]);
                             }
                             free_image(img);
+                        } else
+                        {
+                            for (z=0;z<4;z++)
+                            {
+                                path[j-3] = '0'+z;
+                              //  fprintf(stderr, "%s\n", path);
+                                image img = load_image(path, net.w, net.h, 3);
+                                for(jk = 0; jk < net.w*net.h*3; ++jk)
+                                {
+                                    test.X.vals[itest][jk+(net.w*net.h*3*(z))] = (float)(img.data[jk]);
+                                }
+                                free_image(img);
+                            }
                         }
                         itest++;
                     }
@@ -691,7 +711,7 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
         fprintf(stderr, "\n");
         while(get_current_batch(net) < net.max_batches || net.max_batches == 0){
 
-            // TODO : random shuffle internals
+
             itrain = 0;
             for (i=0;i<net.batch;i++)
             {
@@ -701,27 +721,39 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
                 for (j=0;j<10;j++) y[i*10+j] = 0;
                 y[i*10+cl] = 1;
                 int iimg;
-                if (!augmentParts)
+                if (augmentParts==0 || augmentParts==2)
                 {
                     iimg = rand()%nimgs[cl];
                 }
-                for (z=0;z<4;z++)
+                if (augmentParts==2)
                 {
-                    if (augmentParts)
+                    sprintf(modname, "data/driver128/%s", &pathclass[cl][iimg][pathj[cl][iimg]]);
+                    image img = load_image(modname, net.w, net.h, 3);
+                    for(jj = 0; jj< net.w*net.h*net.c; ++jj)
                     {
-                        iimg = rand()%nimgs[cl]; /// move this outside loop not to mix class parts
-                    }
-                //    fprintf(stderr, "%d %d %s %d\n", i, z, pathclass[cl][iimg], pathj[cl][iimg]);
-                    pathclass[cl][iimg][pathj[cl][iimg]] = '0'+z;
-                    image img = load_image(pathclass[cl][iimg], net.w, net.h, 3);
-                  //  fprintf(stderr, "%d %d %d\n", img.w, img.h, img.c);
-                   // fprintf(stderr, "%d %d %s\n", i, z, pathclass[cl][iimg]);
-                    for(jj = 0; jj< net.w*net.h*3; ++jj)
-                    {
-                        //train.X.vals[itrain][jj+net.w*net.h*3*z] = (float)(img.data[jj]);
-                       X[(i*net.w*net.h*net.c)+jj+(net.w*net.h*3*z)] = (float)(img.data[jj]);
+                        X[(i*net.w*net.h*net.c)+jj] = (float)(img.data[jj]);
                     }
                     free_image(img);
+                } else
+                {
+                    for (z=0;z<4;z++)
+                    {
+                        if (augmentParts==1)
+                        {
+                            iimg = rand()%nimgs[cl]; /// move this outside loop not to mix class parts
+                        }
+                    //    fprintf(stderr, "%d %d %s %d\n", i, z, pathclass[cl][iimg], pathj[cl][iimg]);
+                        pathclass[cl][iimg][pathj[cl][iimg]] = '0'+z;
+                        image img = load_image(pathclass[cl][iimg], net.w, net.h, 3);
+                      //  fprintf(stderr, "%d %d %d\n", img.w, img.h, img.c);
+                       // fprintf(stderr, "%d %d %s\n", i, z, pathclass[cl][iimg]);
+                        for(jj = 0; jj< net.w*net.h*3; ++jj)
+                        {
+                            //train.X.vals[itrain][jj+net.w*net.h*3*z] = (float)(img.data[jj]);
+                           X[(i*net.w*net.h*net.c)+jj+(net.w*net.h*3*z)] = (float)(img.data[jj]);
+                        }
+                        free_image(img);
+                    }
                 }
                 itrain++;
             }
@@ -738,7 +770,7 @@ void trainparts_fold_driver(char *cfgfile, char *trainlist, int K, char *weightf
                 fflush(stdout);
                 time=clock();
             }
-       //   save_network_feature_maps(net, 0, net.n-3, "network", 10, 2);
+      //    save_network_feature_maps(net, 0, net.n-3, "network", 10, 2);
        //   return 0;
             if (isnan(loss) || isnan(avg_loss))
             {
